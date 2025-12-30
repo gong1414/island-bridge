@@ -57,7 +57,7 @@ var gitPullCmd = &cobra.Command{
 
 func init() {
 	gitCommitCmd.Flags().StringVarP(&commitMessage, "message", "m", "", "commit message")
-	gitCommitCmd.MarkFlagRequired("message")
+	_ = gitCommitCmd.MarkFlagRequired("message")
 
 	gitCmd.AddCommand(gitStatusCmd)
 	gitCmd.AddCommand(gitDiffCmd)
@@ -94,7 +94,9 @@ func getGitProvider() *vcs.GitProvider {
 		exitWithError("profile not found", err)
 	}
 
-	client, err := ssh.NewClient(profile)
+	client, err := ssh.NewClientWithOptions(profile, ssh.ClientOptions{
+		InsecureSkipHostKey: GetInsecureSkipHostKey(),
+	})
 	if err != nil {
 		exitWithError("failed to connect", err)
 	}

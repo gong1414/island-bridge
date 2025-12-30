@@ -48,7 +48,9 @@ func runStatus(cmd *cobra.Command, args []string) {
 		fmt.Printf("  Profile: %s (%s@%s:%d)\n", profile.Name, profile.User, profile.Host, profile.Port)
 
 		// Try to connect
-		client, err := ssh.NewClient(profile)
+		client, err := ssh.NewClientWithOptions(profile, ssh.ClientOptions{
+			InsecureSkipHostKey: GetInsecureSkipHostKey(),
+		})
 		if err != nil {
 			color.Red("  Connection: ✗ failed (%v)\n", err)
 			continue

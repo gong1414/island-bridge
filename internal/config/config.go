@@ -119,16 +119,25 @@ func mergeConfigs(base, overlay *Config) *Config {
 }
 
 // Save saves the configuration to the specified path
+// Uses 0600 permission for global config (contains sensitive profile info)
+// Uses 0644 permission for project config (typically shared)
 func (c *Config) Save(path string) error {
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	// Use 0700 for config directory (more restrictive)
+	if err := os.MkdirAll(dir, 0700); err != nil {
 		return err
 	}
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0644)
+
+	// Use stricter permissions for global config file
+	perm := os.FileMode(0644)
+	if path == GlobalConfigPath() {
+		perm = 0600
+	}
+	return os.WriteFile(path, data, perm)
 }
 
 // GetProfile returns a profile by name
@@ -149,5 +158,60 @@ func (c *Config) GetProject(name string) (*Project, error) {
 		}
 	}
 	return nil, fmt.Errorf("project not found: %s", name)
+}
+
+// Validate validates the configuration and returns an error if invalid
+func (c *Config) Validate() error {
+	// Build a map of available profile names for quick lookup
+	profileMap := make(map[string]bool)
+	for _, p := range c.Profiles {
+		if p.Name == "" {
+			return fmt.Errorf("profile with empty name found")
+		}
+		if p.Host == "" {
+			return fmt.Errorf("profile %q: host is required", p.Name)
+		}
+		if p.User == "" {
+			return fmt.Errorf("profile %q: user is required", p.Name)
+		}
+		if profileMap[p.Name] {
+			return fmt.Errorf("duplicate profile name: %s", p.Name)
+		}
+		profileMap[p.Name] = true
+	}
+
+	// Validate projects
+	projectMap := make(map[string]bool)
+	for _, p := range c.Projects {
+		if p.Name == "" {
+			return fmt.Errorf("project with empty name found")
+		}
+		if p.Profile == "" {
+			return fmt.Errorf("project %q: profile is required", p.Name)
+		}
+		if !profileMap[p.Profile] {
+			return fmt.Errorf("project %q: references non-existent profile %q", p.Name, p.Profile)
+		}
+		if p.RemotePath == "" {
+			return fmt.Errorf("project %q: remotePath is required", p.Name)
+		}
+		if projectMap[p.Name] {
+			return fmt.Errorf("duplicate project name: %s", p.Name)
+		}
+		// Validate mode if specified
+		if p.Mode != "" {
+			validModes := map[string]bool{
+				"one-way-local":  true,
+				"one-way-remote": true,
+				"two-way":        true,
+			}
+			if !validModes[p.Mode] {
+				return fmt.Errorf("project %q: invalid mode %q (valid: one-way-local, one-way-remote, two-way)", p.Name, p.Mode)
+			}
+		}
+		projectMap[p.Name] = true
+	}
+
+	return nil
 }
 

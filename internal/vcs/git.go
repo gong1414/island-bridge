@@ -3,10 +3,19 @@ package vcs
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/gong1414/island-bridge/internal/config"
 	"github.com/gong1414/island-bridge/internal/ssh"
+)
+
+// Regex to validate safe path and argument characters
+var (
+	// safePathPattern allows alphanumeric, dots, underscores, hyphens, slashes
+	safePathPattern = regexp.MustCompile(`^[a-zA-Z0-9._\-/~]+$`)
+	// safeArgPattern allows common safe characters in git arguments
+	safeArgPattern = regexp.MustCompile(`^[a-zA-Z0-9._\-/:@=]+$`)
 )
 
 // VCSProvider defines the interface for version control operations
@@ -34,7 +43,22 @@ func NewGitProvider(client *ssh.Client, project *config.Project) *GitProvider {
 }
 
 func (g *GitProvider) runGit(args ...string) (string, error) {
-	cmd := fmt.Sprintf("cd %s && git %s", g.remotePath, strings.Join(args, " "))
+	// Validate remote path
+	if !isValidPath(g.remotePath) {
+		return "", fmt.Errorf("invalid remote path: contains unsafe characters")
+	}
+
+	// Validate and quote all arguments
+	quotedArgs := make([]string, len(args))
+	for i, arg := range args {
+		if !isValidArg(arg) {
+			return "", fmt.Errorf("invalid argument %q: contains unsafe characters", arg)
+		}
+		quotedArgs[i] = shellQuote(arg)
+	}
+
+	// Build command with proper quoting
+	cmd := fmt.Sprintf("cd %s && git %s", shellQuote(g.remotePath), strings.Join(quotedArgs, " "))
 	output, err := g.client.Exec(cmd)
 	if err != nil {
 		// Check if it's a git error with output
@@ -44,6 +68,36 @@ func (g *GitProvider) runGit(args ...string) (string, error) {
 		return "", err
 	}
 	return output, nil
+}
+
+// isValidPath checks if a path contains only safe characters
+func isValidPath(path string) bool {
+	if path == "" {
+		return false
+	}
+	return safePathPattern.MatchString(path)
+}
+
+// isValidArg checks if an argument contains only safe characters
+func isValidArg(arg string) bool {
+	if arg == "" {
+		return true // Empty args are OK for some git commands
+	}
+	// Allow quoted strings for commit messages
+	if strings.HasPrefix(arg, "\"") && strings.HasSuffix(arg, "\"") {
+		return true
+	}
+	return safeArgPattern.MatchString(arg)
+}
+
+// shellQuote properly quotes a string for shell execution
+func shellQuote(s string) string {
+	// If string is already safe, no quoting needed
+	if safePathPattern.MatchString(s) {
+		return s
+	}
+	// Use single quotes and escape any single quotes in the string
+	return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'"
 }
 
 // Status returns git status
