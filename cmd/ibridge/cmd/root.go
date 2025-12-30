@@ -9,8 +9,9 @@ import (
 )
 
 var (
-	projectName string
-	profileName string
+	projectName         string
+	profileName         string
+	insecureSkipHostKey bool
 )
 
 var rootCmd = &cobra.Command{
@@ -34,6 +35,12 @@ func Execute() error {
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&projectName, "project", "p", "", "project name to use")
 	rootCmd.PersistentFlags().StringVarP(&profileName, "profile", "P", "", "profile name to use")
+	rootCmd.PersistentFlags().BoolVar(&insecureSkipHostKey, "insecure", false, "skip SSH host key verification (NOT RECOMMENDED)")
+}
+
+// GetInsecureSkipHostKey returns whether to skip host key verification
+func GetInsecureSkipHostKey() bool {
+	return insecureSkipHostKey
 }
 
 // getProjectAndProfile returns the project and profile to use

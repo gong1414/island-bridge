@@ -5,19 +5,20 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/fatih/color"
 	"github.com/gong1414/island-bridge/internal/config"
+	"github.com/gong1414/island-bridge/internal/pathutil"
 	"github.com/gong1414/island-bridge/internal/ssh"
 )
 
 // Syncer handles file synchronization between local and remote
 type Syncer struct {
-	client     *ssh.Client
-	project    *config.Project
-	ignorePats []string
-	stats      SyncStats
+	client        *ssh.Client
+	project       *config.Project
+	ignoreChecker *pathutil.IgnoreChecker
+	localBase     string
+	stats         SyncStats
 }
 
 // SyncStats tracks synchronization statistics
@@ -30,37 +31,35 @@ type SyncStats struct {
 
 // NewSyncer creates a new Syncer
 func NewSyncer(client *ssh.Client, project *config.Project) *Syncer {
+	localBase, _ := pathutil.ResolveLocalBase(project)
 	return &Syncer{
-		client:     client,
-		project:    project,
-		ignorePats: project.Ignore,
+		client:        client,
+		project:       project,
+		ignoreChecker: pathutil.NewIgnoreChecker(project.Ignore),
+		localBase:     localBase,
 	}
+}
+
+// LocalBase returns the resolved local base path
+func (s *Syncer) LocalBase() string {
+	return s.localBase
 }
 
 // SyncAll performs a full sync from local to remote
 func (s *Syncer) SyncAll() error {
 	color.Blue("Starting full sync: %s -> %s", s.project.LocalPath, s.project.RemotePath)
 
-	localPath := s.project.LocalPath
-	if localPath == "./" || localPath == "." {
-		var err error
-		localPath, err = os.Getwd()
-		if err != nil {
-			return err
-		}
-	}
-
-	err := filepath.Walk(localPath, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(s.localBase, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		relPath, err := filepath.Rel(localPath, path)
+		relPath, err := pathutil.GetRelativePath(s.localBase, path)
 		if err != nil {
 			return err
 		}
 
-		if s.shouldIgnore(relPath) {
+		if s.ignoreChecker.ShouldIgnore(relPath) {
 			if info.IsDir() {
 				return filepath.SkipDir
 			}
@@ -72,9 +71,7 @@ func (s *Syncer) SyncAll() error {
 			return nil
 		}
 
-		remotePath := filepath.Join(s.project.RemotePath, relPath)
-		// Convert to forward slashes for remote path
-		remotePath = strings.ReplaceAll(remotePath, "\\", "/")
+		remotePath := pathutil.ToRemotePath(s.project.RemotePath, relPath)
 
 		if err := s.client.UploadFile(path, remotePath); err != nil {
 			color.Red("  ✗ %s: %v", relPath, err)
@@ -93,26 +90,16 @@ func (s *Syncer) SyncAll() error {
 
 // SyncFile syncs a single file
 func (s *Syncer) SyncFile(localPath string) error {
-	localBase := s.project.LocalPath
-	if localBase == "./" || localBase == "." {
-		var err error
-		localBase, err = os.Getwd()
-		if err != nil {
-			return err
-		}
-	}
-
-	relPath, err := filepath.Rel(localBase, localPath)
+	relPath, err := pathutil.GetRelativePath(s.localBase, localPath)
 	if err != nil {
 		return err
 	}
 
-	if s.shouldIgnore(relPath) {
+	if s.ignoreChecker.ShouldIgnore(relPath) {
 		return nil
 	}
 
-	remotePath := filepath.Join(s.project.RemotePath, relPath)
-	remotePath = strings.ReplaceAll(remotePath, "\\", "/")
+	remotePath := pathutil.ToRemotePath(s.project.RemotePath, relPath)
 
 	if err := s.client.UploadFile(localPath, remotePath); err != nil {
 		return err
@@ -124,22 +111,12 @@ func (s *Syncer) SyncFile(localPath string) error {
 
 // DeleteRemote deletes a file from remote
 func (s *Syncer) DeleteRemote(localPath string) error {
-	localBase := s.project.LocalPath
-	if localBase == "./" || localBase == "." {
-		var err error
-		localBase, err = os.Getwd()
-		if err != nil {
-			return err
-		}
-	}
-
-	relPath, err := filepath.Rel(localBase, localPath)
+	relPath, err := pathutil.GetRelativePath(s.localBase, localPath)
 	if err != nil {
 		return err
 	}
 
-	remotePath := filepath.Join(s.project.RemotePath, relPath)
-	remotePath = strings.ReplaceAll(remotePath, "\\", "/")
+	remotePath := pathutil.ToRemotePath(s.project.RemotePath, relPath)
 
 	if err := s.client.Remove(remotePath); err != nil {
 		return err
@@ -147,19 +124,6 @@ func (s *Syncer) DeleteRemote(localPath string) error {
 
 	color.Yellow("  ✗ deleted: %s", relPath)
 	return nil
-}
-
-func (s *Syncer) shouldIgnore(path string) bool {
-	for _, pat := range s.ignorePats {
-		// Simple pattern matching
-		if matched, _ := filepath.Match(pat, filepath.Base(path)); matched {
-			return true
-		}
-		if strings.Contains(path, pat) {
-			return true
-		}
-	}
-	return false
 }
 
 func (s *Syncer) printStats() {

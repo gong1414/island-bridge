@@ -9,13 +9,17 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Test on multiple Go versions for compatibility
+        go-version: ['1.21', '1.22', '1.23']
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Go
+    - name: Set up Go ${{ matrix.go-version }}
       uses: actions/setup-go@v5
       with:
-        go-version: '1.22'
+        go-version: ${{ matrix.go-version }}
 
     - name: Build
       run: go build -v ./...
@@ -36,7 +40,8 @@ jobs:
     - name: golangci-lint
       uses: golangci/golangci-lint-action@v4
       with:
-        version: latest
+        # Pin to specific version to avoid CI failures from rule changes
+        version: v1.62.2
 
   release:
     needs: [build, lint]
