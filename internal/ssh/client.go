@@ -2,16 +2,25 @@
 package ssh
 
 import (
+	"bufio"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gong1414/island-bridge/internal/config"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 )
+
+// ClientOptions provides options for creating SSH client
+type ClientOptions struct {
+	InsecureSkipHostKey bool
+}
 
 // Client wraps SSH and SFTP connections
 type Client struct {
@@ -20,8 +29,13 @@ type Client struct {
 	profile    *config.Profile
 }
 
-// NewClient creates a new SSH client from a profile
+// NewClient creates a new SSH client from a profile with default options
 func NewClient(profile *config.Profile) (*Client, error) {
+	return NewClientWithOptions(profile, ClientOptions{InsecureSkipHostKey: false})
+}
+
+// NewClientWithOptions creates a new SSH client from a profile with custom options
+func NewClientWithOptions(profile *config.Profile, opts ClientOptions) (*Client, error) {
 	var authMethods []ssh.AuthMethod
 
 	// Try to use SSH key
@@ -59,10 +73,16 @@ func NewClient(profile *config.Profile) (*Client, error) {
 		port = 22
 	}
 
+	// Get host key callback
+	hostKeyCallback, err := getHostKeyCallback(opts.InsecureSkipHostKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to setup host key verification: %w", err)
+	}
+
 	sshConfig := &ssh.ClientConfig{
 		User:            profile.User,
 		Auth:            authMethods,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: hostKeyCallback,
 		Timeout:         30 * time.Second,
 	}
 
@@ -83,6 +103,110 @@ func NewClient(profile *config.Profile) (*Client, error) {
 		sftpClient: sftpClient,
 		profile:    profile,
 	}, nil
+}
+
+// getHostKeyCallback returns appropriate host key callback
+func getHostKeyCallback(insecure bool) (ssh.HostKeyCallback, error) {
+	if insecure {
+		return ssh.InsecureIgnoreHostKey(), nil
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get home directory: %w", err)
+	}
+
+	knownHostsPath := filepath.Join(home, ".ssh", "known_hosts")
+
+	// Check if known_hosts exists
+	if _, err := os.Stat(knownHostsPath); os.IsNotExist(err) {
+		// Create the file if it doesn't exist
+		if err := os.MkdirAll(filepath.Dir(knownHostsPath), 0700); err != nil {
+			return nil, err
+		}
+		if err := os.WriteFile(knownHostsPath, []byte{}, 0600); err != nil {
+			return nil, err
+		}
+	}
+
+	// Use knownhosts callback with custom handling for unknown hosts
+	callback, err := knownhosts.New(knownHostsPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse known_hosts: %w", err)
+	}
+
+	// Wrap the callback to handle unknown hosts
+	return func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+		err := callback(hostname, remote, key)
+		if err != nil {
+			// Check if it's an unknown host error
+			if keyErr, ok := err.(*knownhosts.KeyError); ok && len(keyErr.Want) == 0 {
+				// Host not in known_hosts, add it automatically with user notification
+				fmt.Printf("Warning: Permanently adding '%s' to known hosts.\n", hostname)
+				if addErr := addHostKey(knownHostsPath, hostname, key); addErr != nil {
+					return fmt.Errorf("failed to add host key: %w", addErr)
+				}
+				return nil
+			}
+			return err
+		}
+		return nil
+	}, nil
+}
+
+// addHostKey adds a new host key to known_hosts file
+func addHostKey(path, hostname string, key ssh.PublicKey) error {
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	// Normalize hostname (remove port if it's 22)
+	normalizedHost := normalizeHostname(hostname)
+	line := knownhosts.Line([]string{normalizedHost}, key)
+	_, err = fmt.Fprintln(f, line)
+	return err
+}
+
+// normalizeHostname removes the default SSH port from hostname
+func normalizeHostname(hostname string) string {
+	// If it ends with :22, remove it
+	if strings.HasSuffix(hostname, ":22") {
+		return strings.TrimSuffix(hostname, ":22")
+	}
+	return hostname
+}
+
+// parseKnownHosts parses the known_hosts file and returns host entries
+func parseKnownHosts(path string) (map[string]bool, error) {
+	hosts := make(map[string]bool)
+
+	f, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return hosts, nil
+		}
+		return nil, err
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		// First field is the hostname(s)
+		fields := strings.Fields(line)
+		if len(fields) >= 1 {
+			for _, h := range strings.Split(fields[0], ",") {
+				hosts[h] = true
+			}
+		}
+	}
+
+	return hosts, scanner.Err()
 }
 
 // Close closes both SSH and SFTP connections

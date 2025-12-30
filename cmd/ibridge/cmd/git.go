@@ -94,7 +94,9 @@ func getGitProvider() *vcs.GitProvider {
 		exitWithError("profile not found", err)
 	}
 
-	client, err := ssh.NewClient(profile)
+	client, err := ssh.NewClientWithOptions(profile, ssh.ClientOptions{
+		InsecureSkipHostKey: GetInsecureSkipHostKey(),
+	})
 	if err != nil {
 		exitWithError("failed to connect", err)
 	}

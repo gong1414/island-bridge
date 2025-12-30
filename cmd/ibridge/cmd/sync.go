@@ -47,7 +47,9 @@ func runSync(cmd *cobra.Command, args []string) {
 	}
 
 	// Connect to remote
-	client, err := ssh.NewClient(profile)
+	client, err := ssh.NewClientWithOptions(profile, ssh.ClientOptions{
+		InsecureSkipHostKey: GetInsecureSkipHostKey(),
+	})
 	if err != nil {
 		exitWithError("failed to connect to remote", err)
 	}

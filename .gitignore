@@ -34,3 +34,6 @@ vendor/
 # Logs
 *.log
 
+# Internal review documents (not for public release)
+docs/island-bridge-review.md
+
