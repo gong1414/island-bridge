@@ -6,7 +6,7 @@ require (
 	github.com/fatih/color v1.18.0
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/pkg/sftp v1.13.7
-	github.com/spf13/cobra v1.8.1
+	github.com/spf13/cobra v1.10.2
 	golang.org/x/crypto v0.46.0
 )
 
@@ -15,6 +15,6 @@ require (
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/spf13/pflag v1.0.9 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 )
