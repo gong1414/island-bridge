@@ -84,6 +84,12 @@ ibridge init
 # 完整同步 - 上传所有文件到远程服务器
 ibridge sync
 
+# 从远程下载文件到本地
+ibridge sync -d download
+
+# 双向同步
+ibridge sync -d both
+
 # 同步指定项目（如果配置了多个项目）
 ibridge sync -p my-project
 ```
@@ -137,7 +143,10 @@ ibridge status
 | 命令 | 描述 |
 |------|------|
 | `ibridge init` | 交互式初始化项目配置 |
-| `ibridge sync` | 完整文件同步（本地 → 远程） |
+| `ibridge sync` | 完整文件同步（使用配置的模式） |
+| `ibridge sync -d upload` | 上传本地文件到远程 |
+| `ibridge sync -d download` | 从远程下载文件到本地 |
+| `ibridge sync -d both` | 双向同步 |
 | `ibridge watch` | 监听变化并自动同步 |
 | `ibridge git status` | 显示远程 git 状态 |
 | `ibridge git diff` | 显示远程 git 差异 |
@@ -156,6 +165,7 @@ ibridge status
 |------|------|
 | `-p, --project <name>` | 指定项目名称（配置多个项目时使用） |
 | `-P, --profile <name>` | 指定配置名称（配置多个服务器时使用） |
+| `-d, --direction <dir>` | 同步方向：`upload`、`download` 或 `both` |
 | `--insecure` | 跳过 SSH 主机密钥验证（不推荐） |
 
 ## ⚙️ 配置文件
