@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/fatih/color v1.18.0
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/pkg/sftp v1.13.7
+	github.com/pkg/sftp v1.13.10
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/crypto v0.46.0
 )
