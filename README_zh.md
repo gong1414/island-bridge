@@ -7,21 +7,21 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/gong1414/island-bridge)](https://goreportcard.com/report/github.com/gong1414/island-bridge)
 [![Release](https://img.shields.io/github/v/release/gong1414/island-bridge)](https://github.com/gong1414/island-bridge/releases)
 
-> Connect your development islands
+> 连接你的开发岛屿
 
-**[中文文档](README_zh.md)**
+**[English](README.md)**
 
-Island Bridge is a cross-platform remote development workflow tool that bridges your local and remote development environments.
+Island Bridge 是一个跨平台的远程开发工作流管理工具，在本地和远程开发环境之间架起桥梁。
 
-## ✨ Features
+## ✨ 功能特性
 
-- **File Synchronization** - Sync files between local and remote environments
-- **Real-time Watch** - Watch file changes and sync automatically
-- **Remote Git Operations** - Execute Git commands on remote server via SSH
-- **Multi-environment** - Support multiple servers and projects
-- **Cross-platform** - Windows, macOS, Linux support
+- **文件同步** - 本地与远程环境之间的文件同步
+- **实时监听** - 监听文件变化，自动同步
+- **远程 Git 操作** - 通过 SSH 执行远程 Git 命令
+- **多环境管理** - 支持多服务器、多项目配置
+- **跨平台支持** - 支持 Windows、macOS、Linux
 
-## 📦 Installation
+## 📦 安装
 
 ### Linux / macOS
 
@@ -35,25 +35,25 @@ curl -sSL https://raw.githubusercontent.com/gong1414/island-bridge/main/install.
 irm https://raw.githubusercontent.com/gong1414/island-bridge/main/install.ps1 | iex
 ```
 
-### Download from Releases
+### 从 Releases 下载
 
-Download the binary for your platform from [Releases](https://github.com/gong1414/island-bridge/releases).
+访问 [Releases 页面](https://github.com/gong1414/island-bridge/releases) 下载适合你平台的二进制文件。
 
-| Platform | Architecture | Download |
-|----------|-------------|----------|
+| 平台 | 架构 | 下载 |
+|------|-----|------|
 | Linux | amd64 | [ibridge-linux-amd64](https://github.com/gong1414/island-bridge/releases/latest) |
 | Linux | arm64 | [ibridge-linux-arm64](https://github.com/gong1414/island-bridge/releases/latest) |
 | macOS | amd64 (Intel) | [ibridge-darwin-amd64](https://github.com/gong1414/island-bridge/releases/latest) |
 | macOS | arm64 (Apple Silicon) | [ibridge-darwin-arm64](https://github.com/gong1414/island-bridge/releases/latest) |
 | Windows | amd64 | [ibridge-windows-amd64.exe](https://github.com/gong1414/island-bridge/releases/latest) |
 
-### Using Go (requires Go 1.24+)
+### 使用 Go 安装（需要 Go 1.24+）
 
 ```bash
 go install github.com/gong1414/island-bridge/cmd/ibridge@latest
 ```
 
-### Build from Source
+### 从源码构建
 
 ```bash
 git clone https://github.com/gong1414/island-bridge.git
@@ -61,27 +61,27 @@ cd island-bridge
 go build -o ibridge ./cmd/ibridge
 ```
 
-## 🚀 Quick Start
+## 🚀 快速开始
 
-### 1. Initialize Configuration
+### 1. 初始化配置
 
 ```bash
 ibridge init
 ```
 
-Follow the wizard to enter your remote server information. This creates a `.island-bridge.json` config file.
+按照向导输入远程服务器信息，会生成 `.island-bridge.json` 配置文件。
 
-### 2. Sync Files
+### 2. 同步文件
 
 ```bash
-# Full sync
+# 完整同步
 ibridge sync
 
-# Watch and auto-sync
+# 监听变化自动同步
 ibridge watch
 ```
 
-### 3. Remote Git Operations
+### 3. 远程 Git 操作
 
 ```bash
 ibridge git status
@@ -90,21 +90,21 @@ ibridge git commit -m "your message"
 ibridge git push
 ```
 
-## 📋 Commands
+## 📋 命令列表
 
-| Command | Description |
-|---------|-------------|
-| `ibridge init` | Initialize project configuration |
-| `ibridge config` | Manage configuration |
-| `ibridge sync` | Full file synchronization |
-| `ibridge watch` | Watch and auto-sync |
-| `ibridge git <cmd>` | Remote Git operations |
-| `ibridge status` | Show project status |
-| `ibridge version` | Show version |
+| 命令 | 描述 |
+|------|------|
+| `ibridge init` | 初始化项目配置 |
+| `ibridge config` | 管理配置 |
+| `ibridge sync` | 完整文件同步 |
+| `ibridge watch` | 监听并自动同步 |
+| `ibridge git <cmd>` | 远程 Git 操作 |
+| `ibridge status` | 显示项目状态 |
+| `ibridge version` | 显示版本 |
 
-## ⚙️ Configuration
+## ⚙️ 配置文件
 
-`.island-bridge.json` example:
+`.island-bridge.json` 示例：
 
 ```json
 {
@@ -131,14 +131,15 @@ ibridge git push
 }
 ```
 
-## 🔧 Sync Modes
+## 🔧 同步模式
 
-| Mode | Description |
-|------|-------------|
-| `one-way-local` | Local → Remote (default) |
-| `one-way-remote` | Remote → Local |
-| `two-way` | Bidirectional sync |
+| 模式 | 描述 |
+|------|------|
+| `one-way-local` | 本地 → 远程（默认） |
+| `one-way-remote` | 远程 → 本地 |
+| `two-way` | 双向同步 |
 
-## 📄 License
+## 📄 许可证
 
 MIT License
+
