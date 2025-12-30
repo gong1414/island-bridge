@@ -178,8 +178,9 @@ func normalizeHostname(hostname string) string {
 	return hostname
 }
 
-// parseKnownHosts parses the known_hosts file and returns host entries
-func parseKnownHosts(path string) (map[string]bool, error) {
+// nolint:unused - kept for potential future use
+// parseKnownHostsMap parses the known_hosts file and returns host entries as a map
+func parseKnownHostsMap(path string) (map[string]bool, error) {
 	hosts := make(map[string]bool)
 
 	f, err := os.Open(path)
@@ -259,7 +260,7 @@ func (c *Client) UploadFile(localPath, remotePath string) error {
 	// Preserve file permissions
 	info, _ := os.Stat(localPath)
 	if info != nil {
-		c.sftpClient.Chmod(remotePath, info.Mode())
+		_ = c.sftpClient.Chmod(remotePath, info.Mode())
 	}
 
 	return nil

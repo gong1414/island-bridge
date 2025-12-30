@@ -57,7 +57,7 @@ var gitPullCmd = &cobra.Command{
 
 func init() {
 	gitCommitCmd.Flags().StringVarP(&commitMessage, "message", "m", "", "commit message")
-	gitCommitCmd.MarkFlagRequired("message")
+	_ = gitCommitCmd.MarkFlagRequired("message")
 
 	gitCmd.AddCommand(gitStatusCmd)
 	gitCmd.AddCommand(gitDiffCmd)
