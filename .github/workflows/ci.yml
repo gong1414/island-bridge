@@ -11,8 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # Test on multiple Go versions for compatibility
-        go-version: ['1.21', '1.22', '1.23']
+        # Test on Go 1.24+ (required by dependencies)
+        go-version: ['1.24']
     steps:
     - uses: actions/checkout@v6
 
@@ -35,13 +35,13 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v6
       with:
-        go-version: '1.22'
+        go-version: '1.24'
 
     - name: golangci-lint
-      uses: golangci/golangci-lint-action@v4
+      uses: golangci/golangci-lint-action@v6
       with:
-        # Pin to specific version to avoid CI failures from rule changes
-        version: v1.62.2
+        # Use version that supports Go 1.24
+        version: v1.64.8
 
   coverage:
     runs-on: ubuntu-latest
@@ -51,7 +51,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v6
       with:
-        go-version: '1.22'
+        go-version: '1.24'
 
     - name: Run tests with coverage
       run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
@@ -75,7 +75,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v6
       with:
-        go-version: '1.22'
+        go-version: '1.24'
 
     - name: Build binaries
       run: |
