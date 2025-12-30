@@ -42,7 +42,7 @@ jobs:
           if [ "${{ matrix.os }}" = "windows" ]; then
             EXT=".exe"
           fi
-          go build -ldflags="-s -w -X main.version=${{ github.ref_name }}" \
+          go build -ldflags="-s -w -X github.com/gong1414/island-bridge/cmd/ibridge/cmd.Version=${{ github.ref_name }}" \
             -o ibridge-${{ matrix.os }}-${{ matrix.arch }}${EXT} \
             ./cmd/ibridge
 
