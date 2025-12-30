@@ -2,6 +2,7 @@
 package pathutil
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -81,4 +82,20 @@ func ToRemotePath(remoteBase, relPath string) string {
 	remotePath := filepath.Join(remoteBase, relPath)
 	// Convert to forward slashes for remote (Unix-style)
 	return strings.ReplaceAll(remotePath, "\\", "/")
+}
+
+// GetRelativePathFromRemote returns the relative path from remote base to full remote path
+func GetRelativePathFromRemote(remoteBase, fullRemotePath string) (string, error) {
+	// Normalize paths (remote paths use forward slashes)
+	remoteBase = strings.TrimSuffix(remoteBase, "/")
+	fullRemotePath = strings.TrimSuffix(fullRemotePath, "/")
+
+	if !strings.HasPrefix(fullRemotePath, remoteBase) {
+		return "", fmt.Errorf("path %s is not under base %s", fullRemotePath, remoteBase)
+	}
+
+	relPath := strings.TrimPrefix(fullRemotePath, remoteBase)
+	relPath = strings.TrimPrefix(relPath, "/")
+
+	return relPath, nil
 }

@@ -25,6 +25,13 @@ type Profile struct {
 	KeyPath  string `json:"keyPath,omitempty"`
 }
 
+// SyncMode constants
+const (
+	SyncModeOneWayLocal  = "one-way-local"  // Local -> Remote (default)
+	SyncModeOneWayRemote = "one-way-remote" // Remote -> Local
+	SyncModeTwoWay       = "two-way"        // Bidirectional
+)
+
 // Project represents a project configuration
 type Project struct {
 	Name       string   `json:"name"`
@@ -34,6 +41,14 @@ type Project struct {
 	Mode       string   `json:"mode"` // "one-way-local", "one-way-remote", "two-way"
 	Watch      bool     `json:"watch"`
 	Ignore     []string `json:"ignore"`
+}
+
+// GetMode returns the sync mode, defaulting to one-way-local
+func (p *Project) GetMode() string {
+	if p.Mode == "" {
+		return SyncModeOneWayLocal
+	}
+	return p.Mode
 }
 
 // GlobalConfigPath returns the global config file path
@@ -201,12 +216,13 @@ func (c *Config) Validate() error {
 		// Validate mode if specified
 		if p.Mode != "" {
 			validModes := map[string]bool{
-				"one-way-local":  true,
-				"one-way-remote": true,
-				"two-way":        true,
+				SyncModeOneWayLocal:  true,
+				SyncModeOneWayRemote: true,
+				SyncModeTwoWay:       true,
 			}
 			if !validModes[p.Mode] {
-				return fmt.Errorf("project %q: invalid mode %q (valid: one-way-local, one-way-remote, two-way)", p.Name, p.Mode)
+				return fmt.Errorf("project %q: invalid mode %q (valid: %s, %s, %s)",
+					p.Name, p.Mode, SyncModeOneWayLocal, SyncModeOneWayRemote, SyncModeTwoWay)
 			}
 		}
 		projectMap[p.Name] = true

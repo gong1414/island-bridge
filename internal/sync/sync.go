@@ -24,11 +24,24 @@ type Syncer struct {
 
 // SyncStats tracks synchronization statistics
 type SyncStats struct {
-	Uploaded int
-	Deleted  int
-	Skipped  int
-	Errors   int
+	Uploaded   int
+	Downloaded int
+	Deleted    int
+	Skipped    int
+	Errors     int
 }
+
+// SyncDirection represents the direction of sync
+type SyncDirection string
+
+const (
+	// DirectionUpload syncs from local to remote
+	DirectionUpload SyncDirection = "upload"
+	// DirectionDownload syncs from remote to local
+	DirectionDownload SyncDirection = "download"
+	// DirectionBoth syncs bidirectionally
+	DirectionBoth SyncDirection = "both"
+)
 
 // NewSyncer creates a new Syncer
 func NewSyncer(client *ssh.Client, project *config.Project) *Syncer {
@@ -127,10 +140,129 @@ func (s *Syncer) DeleteRemote(localPath string) error {
 	return nil
 }
 
+// SyncFromRemote performs a full sync from remote to local
+func (s *Syncer) SyncFromRemote() error {
+	color.Blue("Starting full sync: %s -> %s", s.project.RemotePath, s.project.LocalPath)
+
+	return s.walkRemoteDir(s.project.RemotePath)
+}
+
+// walkRemoteDir recursively walks remote directory and downloads files
+func (s *Syncer) walkRemoteDir(remotePath string) error {
+	entries, err := s.client.ReadDir(remotePath)
+	if err != nil {
+		return fmt.Errorf("failed to read remote directory %s: %w", remotePath, err)
+	}
+
+	for _, entry := range entries {
+		remoteFilePath := pathutil.ToRemotePath(remotePath, entry.Name())
+		relPath, err := pathutil.GetRelativePathFromRemote(s.project.RemotePath, remoteFilePath)
+		if err != nil {
+			s.stats.Errors++
+			continue
+		}
+
+		if s.ignoreChecker.ShouldIgnore(relPath) {
+			if entry.IsDir() {
+				s.stats.Skipped++
+				continue
+			}
+			s.stats.Skipped++
+			continue
+		}
+
+		if entry.IsDir() {
+			if err := s.walkRemoteDir(remoteFilePath); err != nil {
+				s.stats.Errors++
+			}
+			continue
+		}
+
+		localPath := filepath.Join(s.localBase, relPath)
+
+		if err := s.client.DownloadFile(remoteFilePath, localPath); err != nil {
+			color.Red("  ✗ %s: %v", relPath, err)
+			s.stats.Errors++
+			continue
+		}
+
+		color.Green("  ✓ %s", relPath)
+		s.stats.Downloaded++
+	}
+
+	return nil
+}
+
+// SyncFileFromRemote syncs a single file from remote to local
+func (s *Syncer) SyncFileFromRemote(remotePath string) error {
+	relPath, err := pathutil.GetRelativePathFromRemote(s.project.RemotePath, remotePath)
+	if err != nil {
+		return err
+	}
+
+	if s.ignoreChecker.ShouldIgnore(relPath) {
+		return nil
+	}
+
+	localPath := filepath.Join(s.localBase, relPath)
+
+	if err := s.client.DownloadFile(remotePath, localPath); err != nil {
+		return err
+	}
+
+	color.Green("  ✓ downloaded: %s", relPath)
+	return nil
+}
+
+// Sync performs sync based on project mode
+func (s *Syncer) Sync(direction SyncDirection) error {
+	switch direction {
+	case DirectionUpload:
+		return s.SyncAll()
+	case DirectionDownload:
+		if err := s.SyncFromRemote(); err != nil {
+			return err
+		}
+		s.printDownloadStats()
+		return nil
+	case DirectionBoth:
+		// First download from remote, then upload local changes
+		color.Blue("Starting bidirectional sync...")
+		if err := s.SyncFromRemote(); err != nil {
+			return err
+		}
+		return s.SyncAll()
+	default:
+		return s.SyncAll()
+	}
+}
+
+// GetDirectionFromMode returns the sync direction based on project mode
+func GetDirectionFromMode(mode string) SyncDirection {
+	switch mode {
+	case config.SyncModeOneWayLocal:
+		return DirectionUpload
+	case config.SyncModeOneWayRemote:
+		return DirectionDownload
+	case config.SyncModeTwoWay:
+		return DirectionBoth
+	default:
+		return DirectionUpload
+	}
+}
+
 func (s *Syncer) printStats() {
 	fmt.Println()
 	color.Blue("Sync completed:")
 	fmt.Printf("  Uploaded: %d\n", s.stats.Uploaded)
 	fmt.Printf("  Skipped:  %d\n", s.stats.Skipped)
 	fmt.Printf("  Errors:   %d\n", s.stats.Errors)
+}
+
+func (s *Syncer) printDownloadStats() {
+	fmt.Println()
+	color.Blue("Sync completed:")
+	fmt.Printf("  Downloaded: %d\n", s.stats.Downloaded)
+	fmt.Printf("  Skipped:    %d\n", s.stats.Skipped)
+	fmt.Printf("  Errors:     %d\n", s.stats.Errors)
 }
