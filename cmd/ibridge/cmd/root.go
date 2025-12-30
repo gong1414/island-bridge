@@ -1,0 +1,56 @@
+// Package cmd provides CLI commands for island-bridge
+package cmd
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/spf13/cobra"
+)
+
+var (
+	projectName string
+	profileName string
+)
+
+var rootCmd = &cobra.Command{
+	Use:   "ibridge",
+	Short: "Island Bridge - Connect your development islands",
+	Long: `Island Bridge (ibridge) connects your local and remote development environments
+like bridges connecting islands. It provides:
+  - Bidirectional file synchronization between local and remote environments
+  - Real-time file watching with automatic sync
+  - Remote Git operations via SSH
+  - Multi-server, multi-project configuration management
+
+For more information, visit: https://github.com/gong1414/island-bridge`,
+}
+
+// Execute runs the root command
+func Execute() error {
+	return rootCmd.Execute()
+}
+
+func init() {
+	rootCmd.PersistentFlags().StringVarP(&projectName, "project", "p", "", "project name to use")
+	rootCmd.PersistentFlags().StringVarP(&profileName, "profile", "P", "", "profile name to use")
+}
+
+// getProjectAndProfile returns the project and profile to use
+func getProjectAndProfile() (string, string) {
+	if projectName != "" {
+		return projectName, profileName
+	}
+	// Default to first project if not specified
+	return "", ""
+}
+
+func exitWithError(msg string, err error) {
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %s: %v\n", msg, err)
+	} else {
+		fmt.Fprintf(os.Stderr, "Error: %s\n", msg)
+	}
+	os.Exit(1)
+}
+

@@ -1,0 +1,36 @@
+# Binaries (in root directory only)
+/ibridge
+/ibridge.exe
+*.dll
+*.so
+*.dylib
+
+# Build output
+dist/
+bin/
+
+# Test files
+*.test
+*.out
+coverage.txt
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies
+vendor/
+
+# Local config (may contain sensitive data)
+.island-bridge.json
+
+# Logs
+*.log
+
