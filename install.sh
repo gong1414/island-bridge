@@ -72,8 +72,22 @@ install() {
     # Check if in PATH
     if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
         echo "⚠️  $INSTALL_DIR is not in your PATH"
-        echo "   Add this to your shell config (~/.bashrc or ~/.zshrc):"
         echo ""
+
+        # Detect shell config file
+        SHELL_NAME=$(basename "$SHELL")
+        case "$SHELL_NAME" in
+            zsh)  SHELL_RC="$HOME/.zshrc" ;;
+            bash) SHELL_RC="$HOME/.bashrc" ;;
+            *)    SHELL_RC="$HOME/.profile" ;;
+        esac
+
+        echo "   Run one of these commands to add it:"
+        echo ""
+        echo "   # Add to PATH permanently (recommended):"
+        echo "   echo 'export PATH=\"\$PATH:$INSTALL_DIR\"' >> $SHELL_RC && source $SHELL_RC"
+        echo ""
+        echo "   # Or add to PATH for this session only:"
         echo "   export PATH=\"\$PATH:$INSTALL_DIR\""
         echo ""
     else
