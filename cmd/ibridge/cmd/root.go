@@ -8,6 +8,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Version is set at build time via -ldflags
+var Version = "dev"
+
 var (
 	projectName         string
 	profileName         string
@@ -36,6 +39,14 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&projectName, "project", "p", "", "project name to use")
 	rootCmd.PersistentFlags().StringVarP(&profileName, "profile", "P", "", "profile name to use")
 	rootCmd.PersistentFlags().BoolVar(&insecureSkipHostKey, "insecure", false, "skip SSH host key verification (NOT RECOMMENDED)")
+
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "version",
+		Short: "Print version information",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Printf("ibridge version %s\n", Version)
+		},
+	})
 }
 
 // GetInsecureSkipHostKey returns whether to skip host key verification

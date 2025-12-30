@@ -21,11 +21,23 @@ Island Bridge 是一个跨平台的远程开发工作流管理工具，在本地
 
 ## 📦 安装
 
+### 一键安装（推荐）
+
+```bash
+curl -sSL https://raw.githubusercontent.com/gong1414/island-bridge/main/install.sh | bash
+```
+
+### 使用 Go 安装
+
 ```bash
 go install github.com/gong1414/island-bridge/cmd/ibridge@latest
 ```
 
-或者从源码构建：
+### 从 Releases 下载
+
+访问 [Releases 页面](https://github.com/gong1414/island-bridge/releases) 下载适合你平台的二进制文件。
+
+### 从源码构建
 
 ```bash
 git clone https://github.com/gong1414/island-bridge.git
