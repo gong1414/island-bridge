@@ -2,7 +2,6 @@
 package ssh
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"net"
@@ -176,38 +175,6 @@ func normalizeHostname(hostname string) string {
 		return strings.TrimSuffix(hostname, ":22")
 	}
 	return hostname
-}
-
-// nolint:unused - kept for potential future use
-// parseKnownHostsMap parses the known_hosts file and returns host entries as a map
-func parseKnownHostsMap(path string) (map[string]bool, error) {
-	hosts := make(map[string]bool)
-
-	f, err := os.Open(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return hosts, nil
-		}
-		return nil, err
-	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		// First field is the hostname(s)
-		fields := strings.Fields(line)
-		if len(fields) >= 1 {
-			for _, h := range strings.Split(fields[0], ",") {
-				hosts[h] = true
-			}
-		}
-	}
-
-	return hosts, scanner.Err()
 }
 
 // Close closes both SSH and SFTP connections
