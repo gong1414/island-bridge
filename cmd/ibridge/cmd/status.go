@@ -4,9 +4,10 @@ import (
 	"fmt"
 
 	"github.com/fatih/color"
+	"github.com/spf13/cobra"
+
 	"github.com/gong1414/island-bridge/internal/config"
 	"github.com/gong1414/island-bridge/internal/ssh"
-	"github.com/spf13/cobra"
 )
 
 var statusCmd = &cobra.Command{
@@ -69,4 +70,3 @@ func runStatus(cmd *cobra.Command, args []string) {
 		fmt.Println()
 	}
 }
-

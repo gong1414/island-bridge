@@ -10,6 +10,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/fsnotify/fsnotify"
+
 	"github.com/gong1414/island-bridge/internal/config"
 	"github.com/gong1414/island-bridge/internal/pathutil"
 	rsync "github.com/gong1414/island-bridge/internal/sync"
@@ -166,4 +167,3 @@ func (w *Watcher) processEvent(event fsnotify.Event) {
 func (w *Watcher) Close() error {
 	return w.watcher.Close()
 }
-

@@ -31,7 +31,7 @@ type Project struct {
 	Profile    string   `json:"profile"`
 	LocalPath  string   `json:"localPath"`
 	RemotePath string   `json:"remotePath"`
-	Mode       string   `json:"mode"`  // "one-way-local", "one-way-remote", "two-way"
+	Mode       string   `json:"mode"` // "one-way-local", "one-way-remote", "two-way"
 	Watch      bool     `json:"watch"`
 	Ignore     []string `json:"ignore"`
 }
@@ -214,4 +214,3 @@ func (c *Config) Validate() error {
 
 	return nil
 }
-

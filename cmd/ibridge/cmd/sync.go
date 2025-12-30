@@ -1,10 +1,11 @@
 package cmd
 
 import (
+	"github.com/spf13/cobra"
+
 	"github.com/gong1414/island-bridge/internal/config"
 	"github.com/gong1414/island-bridge/internal/ssh"
 	rsync "github.com/gong1414/island-bridge/internal/sync"
-	"github.com/spf13/cobra"
 )
 
 var syncCmd = &cobra.Command{
@@ -61,4 +62,3 @@ func runSync(cmd *cobra.Command, args []string) {
 		exitWithError("sync failed", err)
 	}
 }
-

@@ -4,8 +4,9 @@ import (
 	"fmt"
 
 	"github.com/fatih/color"
-	"github.com/gong1414/island-bridge/internal/config"
 	"github.com/spf13/cobra"
+
+	"github.com/gong1414/island-bridge/internal/config"
 )
 
 var configCmd = &cobra.Command{
@@ -106,4 +107,3 @@ func runConfigValidate(cmd *cobra.Command, args []string) {
 
 	color.Green("✓ Configuration is valid")
 }
-

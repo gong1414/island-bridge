@@ -6,11 +6,12 @@ import (
 	"syscall"
 
 	"github.com/fatih/color"
+	"github.com/spf13/cobra"
+
 	"github.com/gong1414/island-bridge/internal/config"
 	"github.com/gong1414/island-bridge/internal/ssh"
 	rsync "github.com/gong1414/island-bridge/internal/sync"
 	"github.com/gong1414/island-bridge/internal/watch"
-	"github.com/spf13/cobra"
 )
 
 var (
@@ -101,4 +102,3 @@ func runWatch(cmd *cobra.Command, args []string) {
 		exitWithError("watcher error", err)
 	}
 }
-

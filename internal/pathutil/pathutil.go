@@ -82,4 +82,3 @@ func ToRemotePath(remoteBase, relPath string) string {
 	// Convert to forward slashes for remote (Unix-style)
 	return strings.ReplaceAll(remotePath, "\\", "/")
 }
-

@@ -146,4 +146,3 @@ func (g *GitProvider) Log(n int) (string, error) {
 func (g *GitProvider) Branch() (string, error) {
 	return g.runGit("branch", "--show-current")
 }
-

@@ -10,10 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gong1414/island-bridge/internal/config"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
+
+	"github.com/gong1414/island-bridge/internal/config"
 )
 
 // ClientOptions provides options for creating SSH client
@@ -285,4 +286,3 @@ func (c *Client) Exists(path string) bool {
 	_, err := c.sftpClient.Stat(path)
 	return err == nil
 }
-

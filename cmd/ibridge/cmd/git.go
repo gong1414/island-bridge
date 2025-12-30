@@ -5,10 +5,11 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/spf13/cobra"
+
 	"github.com/gong1414/island-bridge/internal/config"
 	"github.com/gong1414/island-bridge/internal/ssh"
 	"github.com/gong1414/island-bridge/internal/vcs"
-	"github.com/spf13/cobra"
 )
 
 var gitCmd = &cobra.Command{
@@ -171,4 +172,3 @@ func runGitPull(cmd *cobra.Command, args []string) {
 	}
 	fmt.Print(output)
 }
-

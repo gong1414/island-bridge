@@ -8,8 +8,9 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/gong1414/island-bridge/internal/config"
 	"github.com/spf13/cobra"
+
+	"github.com/gong1414/island-bridge/internal/config"
 )
 
 var initCmd = &cobra.Command{
@@ -109,4 +110,3 @@ func runInit(cmd *cobra.Command, args []string) {
 	fmt.Println("  1. Run 'ibridge sync' to perform initial sync")
 	fmt.Println("  2. Run 'ibridge watch' to start watching for changes")
 }
-

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/fatih/color"
+
 	"github.com/gong1414/island-bridge/internal/config"
 	"github.com/gong1414/island-bridge/internal/pathutil"
 	"github.com/gong1414/island-bridge/internal/ssh"
@@ -133,4 +134,3 @@ func (s *Syncer) printStats() {
 	fmt.Printf("  Skipped:  %d\n", s.stats.Skipped)
 	fmt.Printf("  Errors:   %d\n", s.stats.Errors)
 }
-
