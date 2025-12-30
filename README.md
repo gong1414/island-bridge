@@ -84,6 +84,12 @@ This creates a `.island-bridge.json` config file in your project directory.
 # Full sync - upload all files to remote server
 ibridge sync
 
+# Download files from remote to local
+ibridge sync -d download
+
+# Bidirectional sync
+ibridge sync -d both
+
 # Sync a specific project (if you have multiple)
 ibridge sync -p my-project
 ```
@@ -137,7 +143,10 @@ ibridge status
 | Command | Description |
 |---------|-------------|
 | `ibridge init` | Initialize project configuration interactively |
-| `ibridge sync` | Full file synchronization (local → remote) |
+| `ibridge sync` | Full file synchronization (uses config mode) |
+| `ibridge sync -d upload` | Upload local files to remote |
+| `ibridge sync -d download` | Download remote files to local |
+| `ibridge sync -d both` | Bidirectional synchronization |
 | `ibridge watch` | Watch for changes and sync automatically |
 | `ibridge git status` | Show git status on remote |
 | `ibridge git diff` | Show git diff on remote |
@@ -156,6 +165,7 @@ ibridge status
 |------|-------------|
 | `-p, --project <name>` | Specify project name (when multiple projects configured) |
 | `-P, --profile <name>` | Specify profile name (when multiple servers configured) |
+| `-d, --direction <dir>` | Sync direction: `upload`, `download`, or `both` |
 | `--insecure` | Skip SSH host key verification (NOT RECOMMENDED) |
 
 ## ⚙️ Configuration
