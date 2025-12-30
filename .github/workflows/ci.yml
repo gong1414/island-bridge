@@ -9,13 +9,17 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Test on multiple Go versions for compatibility
+        go-version: ['1.21', '1.22', '1.23']
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
+    - name: Set up Go ${{ matrix.go-version }}
+      uses: actions/setup-go@v6
       with:
-        go-version: '1.22'
+        go-version: ${{ matrix.go-version }}
 
     - name: Build
       run: go build -v ./...
@@ -26,27 +30,50 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version: '1.22'
 
     - name: golangci-lint
       uses: golangci/golangci-lint-action@v4
       with:
-        version: latest
+        # Pin to specific version to avoid CI failures from rule changes
+        version: v1.62.2
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version: '1.22'
+
+    - name: Run tests with coverage
+      run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./coverage.out
+        fail_ci_if_error: false
+        verbose: true
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   release:
     needs: [build, lint]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version: '1.22'
 
@@ -59,7 +86,7 @@ jobs:
         GOOS=windows GOARCH=amd64 go build -o dist/ibridge-windows-amd64.exe ./cmd/ibridge
 
     - name: Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         files: dist/*
       env:
