@@ -3,33 +3,37 @@ package progress
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/mattn/go-isatty"
 )
 
 // ProgressTracker tracks operation progress
 type ProgressTracker struct {
-	total     int64
-	completed int64
-	errors    int64
-	skipped   int64
-	startTime time.Time
-	message   string
-	unit      string
-	barWidth  int
+	total      int64
+	completed  int64
+	errors     int64
+	skipped    int64
+	startTime  time.Time
+	message    string
+	unit       string
+	barWidth   int
+	isTerminal bool
 }
 
 // NewProgressTracker creates a new progress tracker
 func NewProgressTracker(total int64, message, unit string) *ProgressTracker {
 	return &ProgressTracker{
-		total:     total,
-		message:   message,
-		unit:      unit,
-		barWidth:  40,
-		startTime: time.Now(),
+		total:      total,
+		message:    message,
+		unit:       unit,
+		barWidth:   40,
+		startTime:  time.Now(),
+		isTerminal: isatty.IsTerminal(os.Stdout.Fd()),
 	}
 }
 
@@ -79,9 +83,10 @@ func (p *ProgressTracker) render() {
 		eta = avgTime * time.Duration(remaining)
 	}
 
-	// Render progress
-	fmt.Printf("\r%s: [%s] %.1f%% (%d/%d %s) [%d skipped, %d errors] ETA: %v",
-		p.message, bar, percentage, completed, p.total, p.unit, skipped, errors, eta.Round(time.Second))
+	if p.isTerminal {
+		fmt.Printf("\r%s: [%s] %.1f%% (%d/%d %s) [%d skipped, %d errors] ETA: %v",
+			p.message, bar, percentage, completed, p.total, p.unit, skipped, errors, eta.Round(time.Second))
+	}
 }
 
 // Finish marks the progress as complete

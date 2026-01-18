@@ -2,6 +2,7 @@
 package fileinfo
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -13,13 +14,15 @@ type FileCacheEntry struct {
 	ModTime time.Time
 	Size    int64
 	Path    string
+	Added   time.Time
 }
 
 // FileCache provides fast file change detection
 type FileCache struct {
-	cache  map[string]FileCacheEntry
-	mutex  sync.RWMutex
-	maxAge time.Duration
+	cache      map[string]FileCacheEntry
+	mutex      sync.RWMutex
+	maxAge     time.Duration
+	totalCheck int64
 }
 
 // NewFileCache creates a new file cache
@@ -32,14 +35,19 @@ func NewFileCache() *FileCache {
 
 // HasChanged checks if file has changed since last check
 func (fc *FileCache) HasChanged(filePath string) (bool, error) {
+	fc.mutex.Lock()
+	fc.totalCheck++
+	fc.mutex.Unlock()
+
 	info, err := os.Stat(filePath)
 	if err != nil {
-		return true, nil // Treat errors as changed to trigger sync
+		log.Printf("Warning: failed to stat file %s: %v", filePath, err)
+		return true, nil
 	}
 
-	// Get relative path for caching
 	absPath, err := filepath.Abs(filePath)
 	if err != nil {
+		log.Printf("Warning: failed to get absolute path for %s: %v", filePath, err)
 		return true, nil
 	}
 
@@ -52,7 +60,11 @@ func (fc *FileCache) HasChanged(filePath string) (bool, error) {
 		return true, nil
 	}
 
-	// Fast check: compare modification time and size
+	if time.Since(cached.Added) > fc.maxAge {
+		fc.cacheEntry(absPath, info)
+		return true, nil
+	}
+
 	if info.ModTime() != cached.ModTime || info.Size() != cached.Size {
 		fc.cacheEntry(absPath, info)
 		return true, nil
@@ -75,6 +87,7 @@ func (fc *FileCache) cacheEntry(path string, info os.FileInfo) {
 		ModTime: info.ModTime(),
 		Size:    info.Size(),
 		Path:    absPath,
+		Added:   time.Now(),
 	}
 }
 
@@ -86,8 +99,8 @@ func (fc *FileCache) Clear() {
 }
 
 // Stats returns cache statistics
-func (fc *FileCache) Stats() (int, int) {
+func (fc *FileCache) Stats() (int, int64) {
 	fc.mutex.RLock()
 	defer fc.mutex.RUnlock()
-	return len(fc.cache), len(fc.cache)
+	return len(fc.cache), fc.totalCheck
 }

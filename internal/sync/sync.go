@@ -12,6 +12,7 @@ import (
 	"github.com/gong1414/island-bridge/internal/config"
 	"github.com/gong1414/island-bridge/internal/fileinfo"
 	"github.com/gong1414/island-bridge/internal/pathutil"
+	"github.com/gong1414/island-bridge/internal/progress"
 	"github.com/gong1414/island-bridge/internal/retry"
 	"github.com/gong1414/island-bridge/internal/ssh"
 )
@@ -310,8 +311,14 @@ func (s *Syncer) printDownloadStats() {
 // syncFilesConcurrently processes files concurrently with worker pool
 func (s *Syncer) syncFilesConcurrently(files []string) error {
 	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, 10) // Limit to 10 concurrent uploads
+	semaphore := make(chan struct{}, s.config.MaxConcurrency)
 	errors := make(chan error, len(files))
+
+	var tracker *progress.ProgressTracker
+	if s.config.ShowProgress {
+		tracker = progress.NewProgressTracker(int64(len(files)), "Syncing files", "files")
+		defer tracker.Finish()
+	}
 
 	for _, filePath := range files {
 		wg.Add(1)
@@ -322,6 +329,11 @@ func (s *Syncer) syncFilesConcurrently(files []string) error {
 
 			if err := s.syncFileIfChanged(path); err != nil {
 				errors <- err
+				if tracker != nil {
+					tracker.AddError()
+				}
+			} else if tracker != nil {
+				tracker.Increment()
 			}
 		}(filePath)
 	}
