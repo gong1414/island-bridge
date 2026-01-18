@@ -1,4 +1,5 @@
 name: opencode
+
 on:
   issue_comment:
     types: [created]
@@ -26,13 +27,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          fetch-depth: 1
           persist-credentials: false
 
-      - name: Run OpenCode
+      - name: Run opencode
         uses: anomalyco/opencode/github@latest
         env:
-          ZHIPUAI_API_KEY: ${{ secrets.ZHIPUAI_API_KEY }}
+          ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
         with:
-          model: zhipuai-coding-plan/glm-4.6
-          share: true
+          model: zhipuai-coding-plan/glm-4.7
