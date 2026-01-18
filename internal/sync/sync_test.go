@@ -60,4 +60,3 @@ func TestSyncDirectionConstants(t *testing.T) {
 		t.Errorf("DirectionBoth = %q, want %q", DirectionBoth, "both")
 	}
 }
-

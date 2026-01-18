@@ -53,4 +53,3 @@ func TestSyncModeConstants(t *testing.T) {
 		t.Errorf("SyncModeTwoWay = %q, want %q", SyncModeTwoWay, "two-way")
 	}
 }
-

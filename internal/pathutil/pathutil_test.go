@@ -129,4 +129,3 @@ func TestIgnoreChecker_ShouldIgnore(t *testing.T) {
 		})
 	}
 }
-
