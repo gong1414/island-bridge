@@ -2,9 +2,12 @@
 package sync
 
 import (
+	"crypto/md5"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/fatih/color"
 
@@ -20,6 +23,8 @@ type Syncer struct {
 	ignoreChecker *pathutil.IgnoreChecker
 	localBase     string
 	stats         SyncStats
+	fileCache     map[string]string
+	cacheMutex    sync.RWMutex
 }
 
 // SyncStats tracks synchronization statistics
@@ -51,6 +56,7 @@ func NewSyncer(client *ssh.Client, project *config.Project) *Syncer {
 		project:       project,
 		ignoreChecker: pathutil.NewIgnoreChecker(project.Ignore),
 		localBase:     localBase,
+		fileCache:     make(map[string]string),
 	}
 }
 
@@ -63,6 +69,8 @@ func (s *Syncer) LocalBase() string {
 func (s *Syncer) SyncAll() error {
 	color.Blue("Starting full sync: %s -> %s", s.project.LocalPath, s.project.RemotePath)
 
+	// Collect files first for concurrent processing
+	var filesToSync []string
 	err := filepath.Walk(s.localBase, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -85,21 +93,16 @@ func (s *Syncer) SyncAll() error {
 			return nil
 		}
 
-		remotePath := pathutil.ToRemotePath(s.project.RemotePath, relPath)
-
-		if err := s.client.UploadFile(path, remotePath); err != nil {
-			color.Red("  ✗ %s: %v", relPath, err)
-			s.stats.Errors++
-			return nil
-		}
-
-		color.Green("  ✓ %s", relPath)
-		s.stats.Uploaded++
+		filesToSync = append(filesToSync, path)
 		return nil
 	})
 
-	s.printStats()
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Process files concurrently
+	return s.syncFilesConcurrently(filesToSync)
 }
 
 // SyncFile syncs a single file
@@ -265,4 +268,109 @@ func (s *Syncer) printDownloadStats() {
 	fmt.Printf("  Downloaded: %d\n", s.stats.Downloaded)
 	fmt.Printf("  Skipped:    %d\n", s.stats.Skipped)
 	fmt.Printf("  Errors:     %d\n", s.stats.Errors)
+}
+
+// syncFilesConcurrently processes files concurrently with worker pool
+func (s *Syncer) syncFilesConcurrently(files []string) error {
+	var wg sync.WaitGroup
+	semaphore := make(chan struct{}, 10) // Limit to 10 concurrent uploads
+	errors := make(chan error, len(files))
+
+	for _, filePath := range files {
+		wg.Add(1)
+		go func(path string) {
+			defer wg.Done()
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+
+			if err := s.syncFileIfChanged(path); err != nil {
+				errors <- err
+			}
+		}(filePath)
+	}
+
+	wg.Wait()
+	close(errors)
+
+	// Collect errors
+	for err := range errors {
+		color.Red("Sync error: %v", err)
+		s.stats.Errors++
+	}
+
+	s.printStats()
+	return nil
+}
+
+// getFileHash calculates MD5 hash of a file
+func (s *Syncer) getFileHash(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	hash := md5.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%x", hash.Sum(nil)), nil
+}
+
+// needsSync checks if file needs to be synchronized
+func (s *Syncer) needsSync(filePath string) (bool, error) {
+	localHash, err := s.getFileHash(filePath)
+	if err != nil {
+		return false, err
+	}
+
+	s.cacheMutex.RLock()
+	cachedHash, exists := s.fileCache[filePath]
+	s.cacheMutex.RUnlock()
+
+	if !exists || cachedHash != localHash {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+// syncFileIfChanged syncs file only if it has changed
+func (s *Syncer) syncFileIfChanged(filePath string) error {
+	needsSync, err := s.needsSync(filePath)
+	if err != nil {
+		return err
+	}
+
+	if !needsSync {
+		s.stats.Skipped++
+		return nil
+	}
+
+	relPath, err := pathutil.GetRelativePath(s.localBase, filePath)
+	if err != nil {
+		return err
+	}
+
+	remotePath := pathutil.ToRemotePath(s.project.RemotePath, relPath)
+
+	// Get file hash before upload
+	localHash, err := s.getFileHash(filePath)
+	if err != nil {
+		return err
+	}
+
+	if err := s.client.UploadFile(filePath, remotePath); err != nil {
+		return fmt.Errorf("failed to upload %s: %w", relPath, err)
+	}
+
+	// Update cache
+	s.cacheMutex.Lock()
+	s.fileCache[filePath] = localHash
+	s.cacheMutex.Unlock()
+
+	color.Green("  ✓ %s", relPath)
+	s.stats.Uploaded++
+	return nil
 }
