@@ -32,8 +32,7 @@ jobs:
       - name: Run OpenCode
         uses: anomalyco/opencode/github@latest
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ZHIPUAI_API_KEY: ${{ secrets.ZHIPUAI_API_KEY }}
         with:
           model: zhipuai-coding-plan/glm-4.6
           share: true
