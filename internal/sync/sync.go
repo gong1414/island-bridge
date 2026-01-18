@@ -2,9 +2,7 @@
 package sync
 
 import (
-	"crypto/md5"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -12,7 +10,9 @@ import (
 	"github.com/fatih/color"
 
 	"github.com/gong1414/island-bridge/internal/config"
+	"github.com/gong1414/island-bridge/internal/fileinfo"
 	"github.com/gong1414/island-bridge/internal/pathutil"
+	"github.com/gong1414/island-bridge/internal/retry"
 	"github.com/gong1414/island-bridge/internal/ssh"
 )
 
@@ -23,17 +23,40 @@ type Syncer struct {
 	ignoreChecker *pathutil.IgnoreChecker
 	localBase     string
 	stats         SyncStats
-	fileCache     map[string]string
+	fileChecker   *fileinfo.FileCache
 	cacheMutex    sync.RWMutex
+	config        SyncConfig
 }
 
 // SyncStats tracks synchronization statistics
 type SyncStats struct {
-	Uploaded   int
-	Downloaded int
-	Deleted    int
-	Skipped    int
-	Errors     int
+	Uploaded   int64
+	Downloaded int64
+	Deleted    int64
+	Skipped    int64
+	Errors     int64
+}
+
+// SyncConfig configures synchronization behavior
+type SyncConfig struct {
+	MaxConcurrency   int
+	EnableRetry      bool
+	RetryAttempts    int
+	SkipInitialSync  bool
+	ShowProgress     bool
+	ConflictStrategy string
+}
+
+// DefaultSyncConfig returns sensible defaults
+func DefaultSyncConfig() SyncConfig {
+	return SyncConfig{
+		MaxConcurrency:   10,
+		EnableRetry:      true,
+		RetryAttempts:    3,
+		SkipInitialSync:  false,
+		ShowProgress:     true,
+		ConflictStrategy: "local-wins",
+	}
 }
 
 // SyncDirection represents the direction of sync
@@ -56,7 +79,21 @@ func NewSyncer(client *ssh.Client, project *config.Project) *Syncer {
 		project:       project,
 		ignoreChecker: pathutil.NewIgnoreChecker(project.Ignore),
 		localBase:     localBase,
-		fileCache:     make(map[string]string),
+		fileChecker:   fileinfo.NewFileCache(),
+		config:        DefaultSyncConfig(),
+	}
+}
+
+// NewSyncerWithConfig creates a new Syncer with custom config
+func NewSyncerWithConfig(client *ssh.Client, project *config.Project, cfg SyncConfig) *Syncer {
+	localBase, _ := pathutil.ResolveLocalBase(project)
+	return &Syncer{
+		client:        client,
+		project:       project,
+		ignoreChecker: pathutil.NewIgnoreChecker(project.Ignore),
+		localBase:     localBase,
+		fileChecker:   fileinfo.NewFileCache(),
+		config:        cfg,
 	}
 }
 
@@ -302,38 +339,9 @@ func (s *Syncer) syncFilesConcurrently(files []string) error {
 	return nil
 }
 
-// getFileHash calculates MD5 hash of a file
-func (s *Syncer) getFileHash(filePath string) (string, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-
-	hash := md5.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return "", err
-	}
-
-	return fmt.Sprintf("%x", hash.Sum(nil)), nil
-}
-
 // needsSync checks if file needs to be synchronized
 func (s *Syncer) needsSync(filePath string) (bool, error) {
-	localHash, err := s.getFileHash(filePath)
-	if err != nil {
-		return false, err
-	}
-
-	s.cacheMutex.RLock()
-	cachedHash, exists := s.fileCache[filePath]
-	s.cacheMutex.RUnlock()
-
-	if !exists || cachedHash != localHash {
-		return true, nil
-	}
-
-	return false, nil
+	return s.fileChecker.HasChanged(filePath)
 }
 
 // syncFileIfChanged syncs file only if it has changed
@@ -355,20 +363,17 @@ func (s *Syncer) syncFileIfChanged(filePath string) error {
 
 	remotePath := pathutil.ToRemotePath(s.project.RemotePath, relPath)
 
-	// Get file hash before upload
-	localHash, err := s.getFileHash(filePath)
-	if err != nil {
-		return err
+	if s.config.EnableRetry {
+		retryCfg := retry.DefaultRetryConfig()
+		retryCfg.MaxAttempts = s.config.RetryAttempts
+		return retry.Do(retryCfg, func() error {
+			return s.client.UploadFile(filePath, remotePath)
+		}, fmt.Sprintf("upload %s", relPath))
 	}
 
 	if err := s.client.UploadFile(filePath, remotePath); err != nil {
 		return fmt.Errorf("failed to upload %s: %w", relPath, err)
 	}
-
-	// Update cache
-	s.cacheMutex.Lock()
-	s.fileCache[filePath] = localHash
-	s.cacheMutex.Unlock()
 
 	color.Green("  ✓ %s", relPath)
 	s.stats.Uploaded++
