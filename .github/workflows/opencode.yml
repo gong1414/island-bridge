@@ -12,7 +12,6 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
-  checks: write
 
 jobs:
   opencode:
@@ -26,15 +25,17 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
-      actions: write
-      checks: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.OPENCODE_PAT }}
 
       - name: Run opencode
         uses: anomalyco/opencode/github@latest
         env:
           ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.OPENCODE_PAT }}
         with:
           model: zhipuai-coding-plan/glm-4.7
+          use_github_token: true
