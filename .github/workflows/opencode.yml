@@ -8,6 +8,12 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
 
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  checks: write
+
 jobs:
   opencode:
     if: |
@@ -25,8 +31,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-        with:
-          persist-credentials: false
 
       - name: Run opencode
         uses: anomalyco/opencode/github@latest
