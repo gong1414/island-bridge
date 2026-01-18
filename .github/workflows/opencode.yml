@@ -35,5 +35,5 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         with:
-          model: zhipuai/glm-4-plus
+          model: zhipuai-coding-plan/glm-4.6
           share: true
