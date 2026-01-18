@@ -221,7 +221,9 @@ func (c *Client) UploadFile(localPath, remotePath string) error {
 	}
 	defer remoteFile.Close()
 
-	if _, err := io.Copy(remoteFile, localFile); err != nil {
+	// Use buffered copying for better performance
+	buf := make([]byte, 64*1024) // 64KB buffer
+	if _, err := io.CopyBuffer(remoteFile, localFile, buf); err != nil {
 		return fmt.Errorf("failed to copy file: %w", err)
 	}
 
@@ -254,7 +256,9 @@ func (c *Client) DownloadFile(remotePath, localPath string) error {
 	}
 	defer localFile.Close()
 
-	if _, err := io.Copy(localFile, remoteFile); err != nil {
+	// Use buffered copying for better performance
+	buf := make([]byte, 64*1024) // 64KB buffer
+	if _, err := io.CopyBuffer(localFile, remoteFile, buf); err != nil {
 		return fmt.Errorf("failed to copy file: %w", err)
 	}
 
