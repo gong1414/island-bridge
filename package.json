@@ -6,10 +6,29 @@
   "bin": {
     "island-bridge": "./bin/cli.js"
   },
+  "files": [
+    "bin/",
+    "lib/"
+  ],
   "scripts": {
-    "test": "node --test test/",
-    "start": "node bin/cli.js"
+    "test": "node --test test/config.test.js"
   },
-  "keywords": ["rsync", "sync", "ssh", "cli"],
-  "license": "MIT"
+  "keywords": [
+    "rsync",
+    "sync",
+    "ssh",
+    "cli",
+    "remote",
+    "deploy",
+    "devtools"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gong1414/island-bridge.git"
+  },
+  "author": "gong1414",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
 }
