@@ -1,0 +1,15 @@
+{
+  "name": "island-bridge",
+  "version": "1.0.0",
+  "description": "Sync remote server folders to local directory via rsync over SSH",
+  "type": "module",
+  "bin": {
+    "island-bridge": "./bin/cli.js"
+  },
+  "scripts": {
+    "test": "node --test test/",
+    "start": "node bin/cli.js"
+  },
+  "keywords": ["rsync", "sync", "ssh", "cli"],
+  "license": "MIT"
+}
