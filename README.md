@@ -21,9 +21,28 @@ npx island-bridge push
 - `rsync` installed on both local and remote machines
 - SSH access to remote server (uses system `~/.ssh/config`)
 
+## Quick Start
+
+```bash
+# Create config interactively
+island-bridge init
+
+# Or create config via flags (AI/script friendly)
+island-bridge init --host 192.168.1.100 --user deploy --paths "/var/www/app,/etc/nginx/conf.d"
+
+# Check environment is ready
+island-bridge status
+
+# Pull remote folders to local
+island-bridge pull
+
+# Push local changes back
+island-bridge push
+```
+
 ## Usage
 
-1. Create `island-bridge.json` in your working directory:
+1. Create `island-bridge.json` in your working directory (or run `island-bridge init`):
 
 ```json
 {
@@ -68,6 +87,9 @@ island-bridge push
 | `watch` | Watch local folders and auto-push on changes |
 | `diff` | Preview changes without syncing |
 | `history` | Show sync history |
+| `init` | Create config file interactively or via flags |
+| `status` | Show config, SSH, rsync, and paths status |
+| `backup` | Manage sync backups (list, restore, clean) |
 
 ## Options
 
@@ -80,8 +102,79 @@ island-bridge push
 | `--env <name>` | Use named profile from config |
 | `--bwlimit <KB/s>` | Limit transfer bandwidth |
 | `-s, --select` | Interactively select folders to sync |
+| `--path <name>` | Sync specific folder by name (repeatable) |
+| `--json` | Output in JSON format (for scripts/AI) |
+| `--no-backup` | Skip backup for this sync |
 | `-V, --version` | Show version |
 | `-h, --help` | Show help |
+
+## Backup & Restore
+
+Backups are **enabled by default**. Before each sync, files that will be overwritten are automatically saved to a timestamped backup directory.
+
+```bash
+# List available backups
+island-bridge backup list
+
+# Restore a specific backup
+island-bridge backup restore 2026-04-07T14-30-00
+
+# Clean old backups, keep 5 most recent
+island-bridge backup clean --keep 5
+```
+
+### Backup Config
+
+```json
+{
+  "backup": {
+    "enabled": true,
+    "maxCount": 10,
+    "localDir": ".island-bridge-backups",
+    "remoteDir": "~/.island-bridge-backups"
+  }
+}
+```
+
+Use `--no-backup` to skip backup for a single sync operation.
+
+## JSON Output (AI/Script Friendly)
+
+Add `--json` to any command for structured JSON output — no colors, no progress bars, no interactive prompts:
+
+```bash
+# Check environment before syncing
+island-bridge status --json
+
+# Sync and parse results programmatically
+island-bridge pull --json
+
+# Create config non-interactively
+island-bridge init --json --host example.com --user deploy --paths "/var/www/app"
+```
+
+Example JSON output:
+
+```json
+{
+  "version": "2.0.0",
+  "command": "pull",
+  "success": true,
+  "results": [
+    {
+      "folder": "app",
+      "remotePath": "/var/www/app",
+      "success": true,
+      "changes": [
+        { "type": "add", "file": "index.js" },
+        { "type": "delete", "file": "old.css" }
+      ]
+    }
+  ],
+  "messages": [],
+  "errors": []
+}
+```
 
 ## Advanced Config
 
@@ -94,6 +187,10 @@ island-bridge push
   },
   "exclude": ["node_modules", ".DS_Store", "*.log"],
   "bwlimit": 1000,
+  "backup": {
+    "enabled": true,
+    "maxCount": 10
+  },
   "hooks": {
     "beforeSync": "echo 'Starting sync...'",
     "afterSync": "pm2 restart app"
@@ -162,6 +259,12 @@ island-bridge pull --config /path/to/my-config.json
 ## Examples
 
 ```bash
+# Create config interactively
+island-bridge init
+
+# Check everything is working
+island-bridge status
+
 # Preview what would change
 island-bridge pull --dry-run
 
@@ -170,6 +273,9 @@ island-bridge diff
 
 # Sync with bandwidth limit
 island-bridge pull --bwlimit 500
+
+# Sync only specific folder
+island-bridge pull --path app
 
 # Auto-push on file changes
 island-bridge watch
@@ -183,8 +289,15 @@ island-bridge pull --env staging
 # Quiet mode for CI/scripts
 island-bridge push --quiet
 
+# JSON output for AI/scripts
+island-bridge pull --json
+
 # View sync history
 island-bridge history
+
+# List and restore backups
+island-bridge backup list
+island-bridge backup restore 2026-04-07T14-30-00
 ```
 
 ## Features
@@ -207,6 +320,12 @@ island-bridge history
 - **Config search** — finds config in parent directories
 - **Fault tolerant** — skips failed transfers, reports summary at end
 - **Zero dependencies** — pure Node.js, no npm dependencies
+- **Auto backup** — files backed up before overwrite, with restore support
+- **JSON output** — structured output for AI agents and scripts
+- **Init command** — interactive or flag-based config setup
+- **Status check** — diagnose SSH, rsync, and path issues
+- **Path filter** — sync specific folders with `--path`
+- **Error hints** — actionable suggestions on every error
 
 ## License
 
