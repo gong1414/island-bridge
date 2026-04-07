@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { extractFolderName } from '../lib/config.js';
+import { extractFolderName, backupDefaults, validateBackupConfig } from '../lib/config.js';
 import { buildRsyncArgs } from '../lib/sync.js';
 import { rsyncExitMessage } from '../lib/summary.js';
 
@@ -67,5 +67,44 @@ describe('rsyncExitMessage', () => {
 
   it('returns generic message for unknown codes', () => {
     assert.match(rsyncExitMessage(99), /exit code 99/);
+  });
+});
+
+describe('backupDefaults', () => {
+  it('returns default backup config', () => {
+    const defaults = backupDefaults();
+    assert.equal(defaults.enabled, true);
+    assert.equal(defaults.maxCount, 10);
+    assert.equal(defaults.localDir, '.island-bridge-backups');
+    assert.equal(defaults.remoteDir, '~/.island-bridge-backups');
+  });
+});
+
+describe('config backup validation', () => {
+  it('rejects non-object backup', () => {
+    assert.throws(
+      () => validateBackupConfig('not-an-object'),
+      /backup.*must be an object/
+    );
+  });
+
+  it('rejects non-boolean enabled', () => {
+    assert.throws(
+      () => validateBackupConfig({ enabled: 'yes' }),
+      /enabled.*must be a boolean/
+    );
+  });
+
+  it('rejects non-positive maxCount', () => {
+    assert.throws(
+      () => validateBackupConfig({ maxCount: 0 }),
+      /maxCount.*must be a positive/
+    );
+  });
+
+  it('accepts valid backup config', () => {
+    assert.doesNotThrow(() =>
+      validateBackupConfig({ enabled: true, maxCount: 5 })
+    );
   });
 });
