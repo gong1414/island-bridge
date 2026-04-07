@@ -93,4 +93,65 @@ describe('parseArgs', () => {
     assert.equal(args.bwlimit, null);
     assert.equal(args.select, false);
   });
+
+  it('parses --json flag', () => {
+    assert.equal(parseArgs(['pull', '--json']).json, true);
+  });
+
+  it('parses --path single value', () => {
+    assert.deepStrictEqual(parseArgs(['pull', '--path', 'app']).path, ['app']);
+  });
+
+  it('parses --path multiple values', () => {
+    assert.deepStrictEqual(
+      parseArgs(['pull', '--path', 'app', '--path', 'conf.d']).path,
+      ['app', 'conf.d']
+    );
+  });
+
+  it('parses --no-backup flag', () => {
+    assert.equal(parseArgs(['pull', '--no-backup']).noBackup, true);
+  });
+
+  it('parses init command', () => {
+    assert.equal(parseArgs(['init']).command, 'init');
+  });
+
+  it('parses status command', () => {
+    assert.equal(parseArgs(['status']).command, 'status');
+  });
+
+  it('parses backup command with subcommand', () => {
+    const args = parseArgs(['backup', 'list']);
+    assert.equal(args.command, 'backup');
+    assert.equal(args.subcommand, 'list');
+  });
+
+  it('parses backup restore with timestamp', () => {
+    const args = parseArgs(['backup', 'restore', '2026-04-07T14-30-00']);
+    assert.equal(args.command, 'backup');
+    assert.equal(args.subcommand, 'restore');
+    assert.equal(args.backupTimestamp, '2026-04-07T14-30-00');
+  });
+
+  it('parses backup clean --keep', () => {
+    const args = parseArgs(['backup', 'clean', '--keep', '5']);
+    assert.equal(args.command, 'backup');
+    assert.equal(args.subcommand, 'clean');
+    assert.equal(args.keep, 5);
+  });
+
+  it('parses init flags for non-interactive mode', () => {
+    const args = parseArgs(['init', '--host', 'example.com', '--user', 'deploy', '--paths', '/var/www/app,/etc/nginx']);
+    assert.equal(args.command, 'init');
+    assert.equal(args.host, 'example.com');
+    assert.equal(args.user, 'deploy');
+    assert.equal(args.paths, '/var/www/app,/etc/nginx');
+  });
+
+  it('--json and --quiet together is allowed', () => {
+    const args = parseArgs(['pull', '--json', '--quiet']);
+    assert.equal(args.json, true);
+    assert.equal(args.quiet, true);
+  });
 });
