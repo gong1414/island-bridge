@@ -1,3 +1,4 @@
-node_modules
-.omc
-.claude
+node_modules/
+dist/
+.island-bridge-backups/
+.island-bridge-history.json

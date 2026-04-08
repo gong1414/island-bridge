@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { Reporter } from '../lib/reporter.js';
+import { Reporter } from '../src/lib/reporter.js';
 
 const noop = { write: () => {} };
 
@@ -73,17 +73,17 @@ describe('Reporter — json mode', () => {
 
 describe('Reporter — human mode', () => {
   it('info writes to stdout', () => {
-    const lines = [];
-    const r = new Reporter('human', { write: (s) => lines.push(s) });
+    const lines: string[] = [];
+    const r = new Reporter('human', { write: (s: string) => lines.push(s) });
     r.info('hello');
     assert.ok(lines.some(l => l.includes('hello')));
   });
 
   it('error writes red text with hint', () => {
-    const lines = [];
+    const lines: string[] = [];
     const r = new Reporter('human', {
-      write: (s) => lines.push(s),
-      writeErr: (s) => lines.push(s),
+      write: (s: string) => lines.push(s),
+      writeErr: (s: string) => lines.push(s),
     });
     r.error('broken', 'fix it');
     const joined = lines.join('');

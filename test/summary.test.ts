@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { rsyncExitMessage, getErrorHint } from '../lib/summary.js';
+import { rsyncExitMessage, getErrorHint } from '../src/lib/summary.js';
 
 describe('getErrorHint', () => {
   it('returns SSH hint for exit code 255', () => {

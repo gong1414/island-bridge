@@ -1,8 +1,10 @@
 /**
  * Map rsync exit codes to human-readable messages.
  */
-export function rsyncExitMessage(code) {
-  const messages = {
+import type { SyncResult } from './types.js';
+
+export function rsyncExitMessage(code: number): string {
+  const messages: Record<number, string> = {
     0: 'success',
     11: 'disk full or quota exceeded',
     12: 'rsync protocol error: possible network issue',
@@ -18,7 +20,7 @@ export function rsyncExitMessage(code) {
 /**
  * Print a summary of sync results.
  */
-export function printSummary(results) {
+export function printSummary(results: SyncResult[]): void {
   console.log('\n--- Sync Summary ---');
 
   for (const r of results) {
@@ -36,12 +38,12 @@ export function printSummary(results) {
 
 /**
  * Get an actionable hint for a given error.
- * @param {number|string} code — rsync exit code or error key
- * @param {object} [context] — optional context (host, user, etc.)
- * @returns {string|null}
+ * @param code — rsync exit code or error key
+ * @param context — optional context (host, user, etc.)
+ * @returns string or null
  */
-export function getErrorHint(code, context = {}) {
-  const hints = {
+export function getErrorHint(code: number | string, context: { host?: string; user?: string } = {}): string | null {
+  const hints: Record<number | string, () => string> = {
     255: () => {
       const target = context.user && context.host
         ? `${context.user}@${context.host}`

@@ -1,21 +1,28 @@
 import { createInterface } from 'node:readline';
+import * as readline from 'node:readline';
 import { existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import type { ParsedArgs } from './types.js';
 
 const CONFIG_FILE = 'island-bridge.json';
 
 /**
  * Build a config object from flag values.
- * @param {object} opts - { host, user, paths, exclude? }
- * @returns {object} config object ready to serialize
+ * @param opts - { host, user, paths, exclude? }
+ * @returns config object ready to serialize
  */
-export function buildConfig(opts) {
+export function buildConfig(opts: {
+  host?: string;
+  user?: string;
+  paths?: string;
+  exclude?: string;
+}): { remote: { host: string; user: string; paths: string[] }; exclude?: string[] } {
   if (!opts.host) throw new Error('host is required');
   if (!opts.user) throw new Error('user is required');
   if (!opts.paths) throw new Error('paths is required');
 
   const remotePaths = opts.paths.split(',').map(p => p.trim()).filter(Boolean);
-  const config = {
+  const config: { remote: { host: string; user: string; paths: string[] }; exclude?: string[] } = {
     remote: {
       host: opts.host,
       user: opts.user,
@@ -33,7 +40,7 @@ export function buildConfig(opts) {
 /**
  * Ask a question via readline.
  */
-function ask(rl, question) {
+function ask(rl: readline.Interface, question: string): Promise<string> {
   return new Promise((resolve) => {
     rl.question(question, resolve);
   });
@@ -41,10 +48,13 @@ function ask(rl, question) {
 
 /**
  * Run the init command.
- * @param {object} args - parsed CLI args
- * @param {object} reporter - Reporter instance
+ * @param args - parsed CLI args
+ * @param reporter - Reporter instance
  */
-export async function runInit(args, reporter) {
+export async function runInit(
+  args: ParsedArgs,
+  reporter: { info(msg: string): void; error(msg: string, hint?: string | null): void }
+): Promise<boolean> {
   const configPath = join(process.cwd(), CONFIG_FILE);
 
   // Non-interactive mode (--json or flags provided)

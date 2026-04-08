@@ -3,16 +3,51 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8'));
+// In compiled output this file lives at dist/lib/reporter.js, so go up two levels to reach project root
+const pkg = JSON.parse(readFileSync(join(__dirname, '..', '..', 'package.json'), 'utf-8')) as { version: string };
+
+interface JsonMessage {
+  level: 'info' | 'warn';
+  text: string;
+}
+
+interface JsonError {
+  message: string;
+  hint: string | null;
+}
+
+interface JsonResult {
+  folder: string;
+  remotePath: string;
+  direction?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  changes: { type: string; file: string }[] | any[];
+  success: boolean | null;
+  error: string | null;
+}
+
+export interface FlushOutput {
+  version: string;
+  command: string | null;
+  success: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  results: any[];
+  messages: JsonMessage[];
+  errors: JsonError[];
+}
 
 export class Reporter {
-  /**
-   * @param {'human'|'json'} mode
-   * @param {object} [io] — override stdout/stderr for testing
-   * @param {function} [io.write] — stdout writer
-   * @param {function} [io.writeErr] — stderr writer
-   */
-  constructor(mode = 'human', io = {}) {
+  mode: 'human' | 'json';
+  _write: (s: string) => void;
+  _writeErr: (s: string) => void;
+  _command: string | null;
+  _messages: JsonMessage[];
+  _errors: JsonError[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _results: any[];
+  _currentResult: JsonResult | null;
+
+  constructor(mode: 'human' | 'json' = 'human', io: { write?: (s: string) => void; writeErr?: (s: string) => void } = {}) {
     this.mode = mode;
     this._write = io.write || ((s) => process.stdout.write(s));
     this._writeErr = io.writeErr || ((s) => process.stderr.write(s));
@@ -25,11 +60,11 @@ export class Reporter {
     this._currentResult = null;
   }
 
-  setCommand(command) {
+  setCommand(command: string): void {
     this._command = command;
   }
 
-  info(message) {
+  info(message: string): void {
     if (this.mode === 'json') {
       this._messages.push({ level: 'info', text: message });
     } else {
@@ -37,7 +72,7 @@ export class Reporter {
     }
   }
 
-  warn(message) {
+  warn(message: string): void {
     if (this.mode === 'json') {
       this._messages.push({ level: 'warn', text: message });
     } else {
@@ -45,7 +80,7 @@ export class Reporter {
     }
   }
 
-  error(message, hint = null) {
+  error(message: string, hint: string | null = null): void {
     if (this.mode === 'json') {
       this._errors.push({ message, hint });
     } else {
@@ -56,7 +91,7 @@ export class Reporter {
     }
   }
 
-  syncStart(direction, folderName, remotePath, opts = {}) {
+  syncStart(direction: string, folderName: string, remotePath: string, opts: { dryRun?: boolean } = {}): void {
     this._currentResult = {
       folder: folderName,
       remotePath,
@@ -72,26 +107,27 @@ export class Reporter {
     }
   }
 
-  syncProgress(data) {
+  syncProgress(data: string): void {
     if (this.mode === 'human') {
       this._write(`\r\x1b[K  \x1b[36m${data}\x1b[0m`);
     }
   }
 
-  syncFileChange(type, filename) {
+  syncFileChange(type: string, filename: string): void {
     if (this._currentResult) {
       this._currentResult.changes.push({ type, file: filename });
     }
     if (this.mode === 'human') {
-      const colors = { add: '32', delete: '33', modify: '36' };
-      const symbols = { add: '+', delete: '-', modify: '~' };
+      const colors: Record<string, string> = { add: '32', delete: '33', modify: '36' };
+      const symbols: Record<string, string> = { add: '+', delete: '-', modify: '~' };
       const c = colors[type] || '0';
       const s = symbols[type] || '?';
       this._write(`\r\x1b[K  \x1b[${c}m${s} ${filename}\x1b[0m\n`);
     }
   }
 
-  syncEnd(folderName, result) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  syncEnd(folderName: string, result: { success: boolean; error?: string | null }): void {
     if (this._currentResult) {
       this._currentResult.success = result.success;
       this._currentResult.error = result.error || null;
@@ -100,7 +136,8 @@ export class Reporter {
     }
   }
 
-  summary(results) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  summary(results: any[]): void {
     if (this.mode === 'human') {
       this._write('\n--- Sync Summary ---\n');
       for (const r of results) {
@@ -116,7 +153,8 @@ export class Reporter {
     }
   }
 
-  diffReport(diffs) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  diffReport(diffs: any[]): void {
     if (this.mode === 'human') {
       if (diffs.length === 0) {
         this._write('\nNo changes detected.\n');
@@ -147,7 +185,8 @@ export class Reporter {
     }
   }
 
-  historyReport(entries) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  historyReport(entries: any[]): void {
     if (this.mode === 'human') {
       if (entries.length === 0) {
         this._write('No sync history found.\n');
@@ -159,7 +198,7 @@ export class Reporter {
         const date = new Date(entry.timestamp).toLocaleString();
         const status = entry.success ? '\x1b[32m✓\x1b[0m' : '\x1b[31m✗\x1b[0m';
         const dir = entry.direction === 'pull' ? '↓ pull' : '↑ push';
-        const folders = entry.folders.map(f => f.name).join(', ');
+        const folders = entry.folders.map((f: { name: string }) => f.name).join(', ');
         const stats = `${entry.total - entry.failed}/${entry.total} ok`;
         this._write(`  ${status} ${date}  ${dir}  [${folders}]  ${stats}\n`);
       }
@@ -169,9 +208,9 @@ export class Reporter {
     }
   }
 
-  flush() {
+  flush(): FlushOutput | null {
     if (this.mode === 'json') {
-      const output = {
+      const output: FlushOutput = {
         version: pkg.version,
         command: this._command,
         success: this._errors.length === 0 && this._results.every(r => r.success !== false),

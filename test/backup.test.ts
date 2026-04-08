@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { generateBackupDir, buildBackupArgs, parseBackupDirs } from '../lib/backup.js';
+import { generateBackupDir, buildBackupArgs, parseBackupDirs } from '../src/lib/backup.js';
 
 describe('generateBackupDir', () => {
   it('generates timestamped local backup path', () => {

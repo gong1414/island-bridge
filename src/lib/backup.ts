@@ -1,38 +1,35 @@
 import { existsSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import type { BackupEntry, RestoreResult } from './types.js';
 
 const TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}$/;
 
 /**
  * Format a Date as a filesystem-safe timestamp.
  */
-function formatTimestamp(date) {
+function formatTimestamp(date: Date): string {
   return date.toISOString().replace(/:/g, '-').replace(/\.\d{3}Z$/, '');
 }
 
 /**
  * Generate a backup directory path.
- * @param {string} baseDir - e.g. '.island-bridge-backups'
- * @param {string} folderName - e.g. 'app'
- * @param {Date} [date]
- * @returns {string}
  */
-export function generateBackupDir(baseDir, folderName, date = new Date()) {
+export function generateBackupDir(baseDir: string, folderName: string, date: Date = new Date()): string {
   const ts = formatTimestamp(date);
   return `${baseDir}/${ts}/${folderName}`;
 }
 
 /**
  * Build rsync backup args.
- * @param {string} direction - 'pull' or 'push'
- * @param {string|null} localDir - local backup base dir
- * @param {string|null} remoteDir - remote backup base dir
- * @param {string} folderName
- * @param {Date} [date]
- * @returns {string[]}
  */
-export function buildBackupArgs(direction, localDir, remoteDir, folderName, date = new Date()) {
+export function buildBackupArgs(
+  direction: string,
+  localDir: string | null,
+  remoteDir: string | null,
+  folderName: string,
+  date: Date = new Date()
+): string[] {
   if (direction === 'pull' && localDir) {
     const backupDir = generateBackupDir(localDir, folderName, date);
     return ['--backup', `--backup-dir=${backupDir}`];
@@ -46,25 +43,21 @@ export function buildBackupArgs(direction, localDir, remoteDir, folderName, date
 
 /**
  * Parse a list of directory names and return valid timestamped ones, sorted ascending.
- * @param {string[]} dirs
- * @returns {{ name: string, date: Date }[]}
  */
-export function parseBackupDirs(dirs) {
+export function parseBackupDirs(dirs: string[]): BackupEntry[] {
   return dirs
     .filter(d => TIMESTAMP_RE.test(d))
     .map(d => ({
       name: d,
       date: new Date(d.replace(/T(\d{2})-(\d{2})-(\d{2})$/, 'T$1:$2:$3Z')),
     }))
-    .sort((a, b) => a.date - b.date);
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
 }
 
 /**
  * List local backups.
- * @param {string} baseDir
- * @returns {{ name: string, date: Date }[]}
  */
-export function listBackups(baseDir) {
+export function listBackups(baseDir: string): BackupEntry[] {
   if (!existsSync(baseDir)) return [];
   const dirs = readdirSync(baseDir).filter(d => {
     const full = join(baseDir, d);
@@ -75,11 +68,8 @@ export function listBackups(baseDir) {
 
 /**
  * Restore a backup by copying files back.
- * @param {string} baseDir - backup base directory
- * @param {string} timestamp - e.g. '2026-04-07T14-30-00'
- * @param {string} [targetDir] - where to restore (defaults to cwd)
  */
-export function restoreBackup(baseDir, timestamp, targetDir = '.') {
+export function restoreBackup(baseDir: string, timestamp: string, targetDir: string = '.'): RestoreResult[] {
   const backupPath = join(baseDir, timestamp);
   if (!existsSync(backupPath)) {
     throw new Error(`Backup not found: ${timestamp}`);
@@ -89,7 +79,7 @@ export function restoreBackup(baseDir, timestamp, targetDir = '.') {
     statSync(join(backupPath, d)).isDirectory()
   );
 
-  const results = [];
+  const results: RestoreResult[] = [];
   for (const folder of folders) {
     const src = join(backupPath, folder) + '/';
     const dst = join(targetDir, folder) + '/';
@@ -97,7 +87,7 @@ export function restoreBackup(baseDir, timestamp, targetDir = '.') {
       execFileSync('rsync', ['-av', '--', src, dst], { stdio: 'pipe' });
       results.push({ folder, success: true, error: null });
     } catch (err) {
-      results.push({ folder, success: false, error: err.message });
+      results.push({ folder, success: false, error: (err as Error).message });
     }
   }
   return results;
@@ -105,16 +95,14 @@ export function restoreBackup(baseDir, timestamp, targetDir = '.') {
 
 /**
  * Clean old backups, keeping the N most recent.
- * @param {string} baseDir
- * @param {number} keep
- * @returns {string[]} removed directory names
+ * @returns removed directory names
  */
-export function cleanBackups(baseDir, keep) {
+export function cleanBackups(baseDir: string, keep: number): string[] {
   const backups = listBackups(baseDir);
   if (backups.length <= keep) return [];
 
   const toRemove = backups.slice(0, backups.length - keep);
-  const removed = [];
+  const removed: string[] = [];
   for (const b of toRemove) {
     const fullPath = join(baseDir, b.name);
     rmSync(fullPath, { recursive: true, force: true });

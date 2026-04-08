@@ -1,15 +1,17 @@
 import { readFileSync, writeFileSync, existsSync, lstatSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import type { SyncResult } from './types.js';
 
 const HISTORY_FILE = '.island-bridge-history.json';
 
 /**
  * Record a sync operation to history.
  */
-export function recordSync(configPath, direction, results) {
+export function recordSync(configPath: string | undefined, direction: string, results: SyncResult[]): void {
   const historyPath = configPath ? join(dirname(configPath), HISTORY_FILE) : HISTORY_FILE;
 
-  let history = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let history: any[] = [];
   if (existsSync(historyPath)) {
     try {
       const parsed = JSON.parse(readFileSync(historyPath, 'utf-8'));
@@ -55,7 +57,7 @@ export function recordSync(configPath, direction, results) {
 /**
  * Display sync history.
  */
-export function showHistory(configPath) {
+export function showHistory(configPath?: string): void {
   const historyPath = configPath ? join(dirname(configPath), HISTORY_FILE) : HISTORY_FILE;
 
   if (!existsSync(historyPath)) {
@@ -63,7 +65,8 @@ export function showHistory(configPath) {
     return;
   }
 
-  let history;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let history: any[];
   try {
     const parsed = JSON.parse(readFileSync(historyPath, 'utf-8'));
     history = Array.isArray(parsed) ? parsed : [];
@@ -84,7 +87,7 @@ export function showHistory(configPath) {
     const date = new Date(entry.timestamp).toLocaleString();
     const status = entry.success ? '\x1b[32m\u2713\x1b[0m' : '\x1b[31m\u2717\x1b[0m';
     const dir = entry.direction === 'pull' ? '\u2193 pull' : '\u2191 push';
-    const folders = entry.folders.map(f => f.name).join(', ');
+    const folders = entry.folders.map((f: { name: string }) => f.name).join(', ');
     const stats = `${entry.total - entry.failed}/${entry.total} ok`;
 
     console.log(`  ${status} ${date}  ${dir}  [${folders}]  ${stats}`);

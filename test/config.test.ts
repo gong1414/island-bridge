@@ -1,8 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { extractFolderName, backupDefaults, validateBackupConfig } from '../lib/config.js';
-import { buildRsyncArgs } from '../lib/sync.js';
-import { rsyncExitMessage } from '../lib/summary.js';
+import { extractFolderName, backupDefaults, validateBackupConfig } from '../src/lib/config.js';
+import { buildRsyncArgs } from '../src/lib/sync.js';
+import { rsyncExitMessage } from '../src/lib/summary.js';
 
 describe('extractFolderName', () => {
   it('extracts basic folder name', () => {

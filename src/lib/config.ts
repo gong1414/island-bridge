@@ -1,12 +1,13 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { basename, resolve, dirname, join } from 'node:path';
+import type { IslandBridgeConfig, BackupConfig } from './types.js';
 
 const CONFIG_FILE = 'island-bridge.json';
 
 /**
  * Search for config file starting from startDir, walking up to root.
  */
-export function findConfigFile(startDir = process.cwd()) {
+export function findConfigFile(startDir: string = process.cwd()): string | null {
   let dir = resolve(startDir);
 
   while (true) {
@@ -22,12 +23,10 @@ export function findConfigFile(startDir = process.cwd()) {
 
 /**
  * Load and validate config.
- * @param {object} [options]
- * @param {string} [options.configPath] - Explicit config file path (--config)
- * @param {string} [options.env] - Profile name to merge (--env)
  */
-export function loadConfig({ configPath, env } = {}) {
-  let filePath;
+export function loadConfig(options: { configPath?: string; env?: string } = {}): IslandBridgeConfig {
+  const { configPath, env } = options;
+  let filePath: string;
 
   if (configPath) {
     filePath = resolve(configPath);
@@ -35,20 +34,22 @@ export function loadConfig({ configPath, env } = {}) {
       throw new Error(`Config file not found: ${configPath}`);
     }
   } else {
-    filePath = findConfigFile();
-    if (!filePath) {
+    const found = findConfigFile();
+    if (!found) {
       throw new Error(`Cannot find ${CONFIG_FILE} in current or parent directories`);
     }
+    filePath = found;
   }
 
-  let raw;
+  let raw: string;
   try {
     raw = readFileSync(filePath, 'utf-8');
   } catch {
     throw new Error(`Failed to read config: ${filePath}`);
   }
 
-  let config;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let config: any;
   try {
     config = JSON.parse(raw);
   } catch {
@@ -83,13 +84,14 @@ export function loadConfig({ configPath, env } = {}) {
   config._filePath = filePath;
   config._explicitConfig = !!configPath;
 
-  return config;
+  return config as IslandBridgeConfig;
 }
 
 /**
  * Validate config structure and values.
  */
-function validate(config) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function validate(config: any): void {
   if (!config.remote) {
     throw new Error("Config error: missing 'remote' section");
   }
@@ -114,7 +116,7 @@ function validate(config) {
     throw new Error("Config error: 'paths' must be a non-empty array of remote paths");
   }
 
-  const seen = new Set();
+  const seen = new Set<string>();
   for (const p of paths) {
     if (typeof p !== 'string' || p.trim() === '') {
       throw new Error(`Config error: each path must be a non-empty string`);
@@ -185,7 +187,7 @@ function validate(config) {
 /**
  * Return default backup config values.
  */
-export function backupDefaults() {
+export function backupDefaults(): BackupConfig {
   return {
     enabled: true,
     maxCount: 10,
@@ -197,7 +199,8 @@ export function backupDefaults() {
 /**
  * Validate backup config section.
  */
-export function validateBackupConfig(backup) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function validateBackupConfig(backup: any): void {
   if (typeof backup !== 'object' || Array.isArray(backup) || backup === null) {
     throw new Error("Config error: 'backup' must be an object");
   }
@@ -221,7 +224,7 @@ export function validateBackupConfig(backup) {
  * Extract folder name (last path component) from a remote path.
  * Strips trailing slashes. Rejects root "/" and empty strings.
  */
-export function extractFolderName(remotePath) {
+export function extractFolderName(remotePath: string): string {
   const trimmed = remotePath.replace(/\/+$/, '');
   if (trimmed === '' || trimmed === '/') {
     throw new Error(`Config error: remote path '${remotePath}' resolves to root or is empty`);

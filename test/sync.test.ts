@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildRsyncArgs } from '../lib/sync.js';
+import { buildRsyncArgs } from '../src/lib/sync.js';
 
 describe('buildRsyncArgs with options', () => {
   it('adds --dry-run flag', () => {

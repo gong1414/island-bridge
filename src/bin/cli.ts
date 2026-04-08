@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8'));
+const pkg = JSON.parse(readFileSync(join(__dirname, '..', '..', 'package.json'), 'utf-8'));
 
 const USAGE = `
 island-bridge v${pkg.version} - Sync remote folders via rsync over SSH
@@ -59,7 +59,7 @@ async function main() {
   let args;
   try {
     args = parseArgs();
-  } catch (err) {
+  } catch (err: any) {
     console.error(`\x1b[31mError: ${err.message}\x1b[0m`);
     process.exit(1);
   }
@@ -83,7 +83,7 @@ async function main() {
   }
 
   const validCommands = ['pull', 'push', 'watch', 'diff', 'history', 'init', 'status', 'backup'];
-  if (!validCommands.includes(args.command)) {
+  if (!validCommands.includes(args.command as string)) {
     reporter.error(
       `Unknown command: ${args.command}`,
       `Valid commands: ${validCommands.join(', ')}`
@@ -92,7 +92,7 @@ async function main() {
     process.exit(1);
   }
 
-  reporter.setCommand(args.command);
+  reporter.setCommand(args.command as string);
 
   // === Init ===
   if (args.command === 'init') {
@@ -105,7 +105,7 @@ async function main() {
   if (args.command === 'history') {
     let config;
     try {
-      config = loadConfig({ configPath: args.config, env: args.env });
+      config = loadConfig({ configPath: args.config ?? undefined, env: args.env ?? undefined });
     } catch {
       // Show history from cwd if no config found
     }
@@ -115,7 +115,7 @@ async function main() {
       const historyFile = config?._filePath
         ? jn(dn(config._filePath), '.island-bridge-history.json')
         : '.island-bridge-history.json';
-      let entries = [];
+      let entries: any[] = [];
       if (efs(historyFile)) {
         try {
           const parsed = JSON.parse(rfs(historyFile, 'utf-8'));
@@ -134,16 +134,16 @@ async function main() {
   if (args.command === 'backup') {
     let config;
     try {
-      config = loadConfig({ configPath: args.config, env: args.env });
+      config = loadConfig({ configPath: args.config ?? undefined, env: args.env ?? undefined });
     } catch {
       config = { backup: { enabled: true, localDir: '.island-bridge-backups', remoteDir: '~/.island-bridge-backups', maxCount: 10 } };
     }
-    const backupConfig = config.backup;
+    const backupConfig = (config as any).backup;
 
     if (args.subcommand === 'list') {
       const backups = listBackups(backupConfig.localDir);
       if (args.json) {
-        reporter.historyReport(backups.map(b => ({ timestamp: b.name, date: b.date.toISOString() })));
+        reporter.historyReport(backups.map((b: any) => ({ timestamp: b.name, date: b.date.toISOString() })));
         reporter.flush();
       } else {
         if (backups.length === 0) {
@@ -169,19 +169,19 @@ async function main() {
         const results = restoreBackup(backupConfig.localDir, args.backupTimestamp);
         if (args.json) {
           for (const r of results) {
-            reporter.syncEnd(r.folder, r);
+            reporter.syncEnd((r as any).folder, r);
           }
           reporter.flush();
         } else {
           for (const r of results) {
-            if (r.success) {
-              console.log(`  \x1b[32m\u2713\x1b[0m ${r.folder} restored`);
+            if ((r as any).success) {
+              console.log(`  \x1b[32m\u2713\x1b[0m ${(r as any).folder} restored`);
             } else {
-              console.log(`  \x1b[31m\u2717\x1b[0m ${r.folder} \u2014 ${r.error}`);
+              console.log(`  \x1b[31m\u2717\x1b[0m ${(r as any).folder} \u2014 ${(r as any).error}`);
             }
           }
         }
-      } catch (err) {
+      } catch (err: any) {
         reporter.error(err.message, 'Run "island-bridge backup list" to see available backups');
         if (args.json) reporter.flush();
         process.exit(1);
@@ -230,8 +230,8 @@ async function main() {
   // === Load config ===
   let config;
   try {
-    config = loadConfig({ configPath: args.config, env: args.env });
-  } catch (err) {
+    config = loadConfig({ configPath: args.config ?? undefined, env: args.env ?? undefined });
+  } catch (err: any) {
     const hint = err.message.includes('Cannot find')
       ? getErrorHint('config-not-found')
       : null;
@@ -256,8 +256,8 @@ async function main() {
 
   // === --path filter ===
   if (args.path.length > 0) {
-    const allNames = config.remote.paths.map(p => extractFolderName(p));
-    const invalid = args.path.filter(name => !allNames.includes(name));
+    const allNames = config.remote.paths.map((p: any) => extractFolderName(p));
+    const invalid = args.path.filter((name: string) => !allNames.includes(name));
     if (invalid.length > 0) {
       reporter.error(
         `Unknown folder name(s): ${invalid.join(', ')}`,
@@ -266,13 +266,13 @@ async function main() {
       if (args.json) reporter.flush();
       process.exit(1);
     }
-    config.remote.paths = config.remote.paths.filter(p =>
+    config.remote.paths = config.remote.paths.filter((p: any) =>
       args.path.includes(extractFolderName(p))
     );
   }
 
   // === Interactive selection ===
-  if (args.select && !args.json && ['pull', 'push', 'diff'].includes(args.command)) {
+  if (args.select && !args.json && ['pull', 'push', 'diff'].includes(args.command as string)) {
     config.remote.paths = await selectPaths(config.remote.paths, reporter);
   }
 
@@ -322,7 +322,7 @@ async function main() {
     runHook('beforeSync', config.hooks.beforeSync, args.quiet, reporter);
   }
 
-  const results = await syncAll(config, args.command, options, reporter);
+  const results = await syncAll(config, args.command as string, options, reporter);
 
   // Run afterSync hook
   if (config.hooks.afterSync) {
@@ -330,7 +330,7 @@ async function main() {
   }
 
   // Record history
-  recordSync(config._filePath, args.command, results);
+  recordSync(config._filePath, args.command as string, results);
 
   // Print summary
   if (!args.quiet || args.json) {
@@ -342,7 +342,7 @@ async function main() {
 
   if (args.json) reporter.flush();
 
-  const hasFailed = results.some(r => !r.success);
+  const hasFailed = results.some((r: any) => !r.success);
   process.exit(hasFailed ? 1 : 0);
 }
 

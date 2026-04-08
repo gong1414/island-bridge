@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseRsyncVersion } from '../lib/status.js';
+import { parseRsyncVersion } from '../src/lib/status.js';
 
 describe('parseRsyncVersion', () => {
   it('extracts version from rsync --version output', () => {

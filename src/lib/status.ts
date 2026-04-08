@@ -1,22 +1,23 @@
 import { execFile } from 'node:child_process';
 import { extractFolderName, backupDefaults } from './config.js';
 import { listBackups } from './backup.js';
+import type { IslandBridgeConfig } from './types.js';
+import type { Reporter } from './reporter.js';
 
 /**
  * Parse rsync version from --version output.
- * @param {string} output
- * @returns {string|null}
+ * @param output
+ * @returns version string or null
  */
-export function parseRsyncVersion(output) {
+export function parseRsyncVersion(output: string): string | null {
   const match = output.match(/rsync\s+version\s+([\d.]+)/);
   return match ? match[1] : null;
 }
 
 /**
  * Check rsync availability and return version.
- * @returns {Promise<{available: boolean, version: string|null}>}
  */
-export function checkRsyncVersion() {
+export function checkRsyncVersion(): Promise<{ available: boolean; version: string | null }> {
   return new Promise((resolve) => {
     execFile('rsync', ['--version'], (err, stdout) => {
       if (err) {
@@ -30,11 +31,10 @@ export function checkRsyncVersion() {
 
 /**
  * Check SSH connectivity.
- * @param {string} user
- * @param {string} host
- * @returns {Promise<{connected: boolean, error: string|null}>}
+ * @param user
+ * @param host
  */
-export function checkSsh(user, host) {
+export function checkSsh(user: string, host: string): Promise<{ connected: boolean; error: string | null }> {
   return new Promise((resolve) => {
     execFile('ssh', ['-o', 'ConnectTimeout=5', '-o', 'BatchMode=yes', `${user}@${host}`, 'echo ok'], {
       timeout: 10000,
@@ -50,17 +50,20 @@ export function checkSsh(user, host) {
 
 /**
  * Check if remote paths exist.
- * @param {string} user
- * @param {string} host
- * @param {string[]} paths
- * @returns {Promise<{path: string, folder: string, exists: boolean}[]>}
+ * @param user
+ * @param host
+ * @param paths
  */
-export async function checkRemotePaths(user, host, paths) {
-  const results = [];
+export async function checkRemotePaths(
+  user: string,
+  host: string,
+  paths: string[]
+): Promise<{ path: string; folder: string; exists: boolean }[]> {
+  const results: { path: string; folder: string; exists: boolean }[] = [];
   for (const p of paths) {
     const folder = extractFolderName(p);
     try {
-      await new Promise((resolve, reject) => {
+      await new Promise<void>((resolve, reject) => {
         execFile('ssh', [
           '-o', 'ConnectTimeout=5',
           '-o', 'BatchMode=yes',
@@ -81,10 +84,10 @@ export async function checkRemotePaths(user, host, paths) {
 
 /**
  * Run the status command.
- * @param {object} config - loaded config
- * @param {object} reporter
+ * @param config - loaded config
+ * @param reporter
  */
-export async function runStatus(config, reporter) {
+export async function runStatus(config: IslandBridgeConfig, reporter: Reporter): Promise<void> {
   const { host, user, paths } = config.remote;
 
   reporter.info(`Config:    ${config._filePath}`);

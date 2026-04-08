@@ -4,11 +4,14 @@ import { extractFolderName } from './config.js';
 /**
  * Interactive path selection.
  * Returns filtered paths array.
- * @param {string[]} paths
- * @param {object} [reporter]
+ * @param paths
+ * @param reporter
  */
-export async function selectPaths(paths, reporter = null) {
-  const write = reporter
+export async function selectPaths(
+  paths: string[],
+  reporter: { info(msg: string): void } | null = null
+): Promise<string[]> {
+  const write: (s: string) => void = reporter
     ? (s) => reporter.info(s)
     : (s) => console.log(s);
 
@@ -24,7 +27,7 @@ export async function selectPaths(paths, reporter = null) {
 
   const rl = createInterface({ input: process.stdin, output: process.stdout });
 
-  const answer = await new Promise((resolve) => {
+  const answer = await new Promise<string>((resolve) => {
     rl.question('Select folders (comma-separated numbers or "a" for all): ', resolve);
   });
   rl.close();

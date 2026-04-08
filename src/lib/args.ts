@@ -2,8 +2,10 @@
  * Lightweight CLI argument parser for island-bridge.
  * Zero dependencies.
  */
-export function parseArgs(argv = process.argv.slice(2)) {
-  const args = {
+import type { ParsedArgs } from './types.js';
+
+export function parseArgs(argv: string[] = process.argv.slice(2)): ParsedArgs {
+  const args: ParsedArgs = {
     command: null,
     subcommand: null,
     dryRun: false,
@@ -54,13 +56,14 @@ export function parseArgs(argv = process.argv.slice(2)) {
         args.env = argv[++i];
         if (!args.env || args.env.startsWith('-')) throw new Error('--env requires a profile name');
         break;
-      case '--bwlimit':
-        args.bwlimit = argv[++i];
-        if (!args.bwlimit || isNaN(Number(args.bwlimit))) {
+      case '--bwlimit': {
+        const bwRaw = argv[++i];
+        if (!bwRaw || isNaN(Number(bwRaw))) {
           throw new Error('--bwlimit requires a numeric value (KB/s)');
         }
-        args.bwlimit = Number(args.bwlimit);
+        args.bwlimit = Number(bwRaw);
         break;
+      }
       case '--select':
       case '-s':
         args.select = true;
@@ -87,13 +90,14 @@ export function parseArgs(argv = process.argv.slice(2)) {
         args.paths = argv[++i];
         if (!args.paths) throw new Error('--paths requires a value');
         break;
-      case '--keep':
-        args.keep = argv[++i];
-        if (!args.keep || isNaN(Number(args.keep))) {
+      case '--keep': {
+        const keepRaw = argv[++i];
+        if (!keepRaw || isNaN(Number(keepRaw))) {
           throw new Error('--keep requires a numeric value');
         }
-        args.keep = Number(args.keep);
+        args.keep = Number(keepRaw);
         break;
+      }
       case '--help':
       case '-h':
         args.help = true;

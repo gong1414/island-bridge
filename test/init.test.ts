@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildConfig } from '../lib/init.js';
+import { buildConfig } from '../src/lib/init.js';
 
 describe('buildConfig', () => {
   it('builds config from flags', () => {
